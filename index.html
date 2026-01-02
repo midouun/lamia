@@ -3,384 +3,471 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام محاكاة SPSS - لمياء</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>SPSS Simulator - Lamia Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <style>
         :root {
-            --primary: #2c5aa0; /* IBM Blue */
-            --bg-color: #f4f4f9;
-            --border-color: #ccc;
+            --win-blue: #185a9d;
+            --win-grey: #f0f0f0;
+            --spss-header: #e3e3e3;
+            --highlight: #ffeb3b;
         }
 
         body {
-            font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-color);
             margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-
-        /* --- تصميم الواجهة (يختفي عند الطباعة) --- */
-        .app-container {
-            max-width: 950px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            min-height: 80vh;
+            font-family: 'Segoe UI', 'Cairo', sans-serif;
+            background: url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+            user-select: none;
         }
 
-        header {
-            background: var(--primary);
+        /* --- سطح المكتب --- */
+        .desktop-icon {
+            width: 80px;
+            text-align: center;
             color: white;
-            padding: 15px 20px;
+            text-shadow: 1px 1px 3px black;
+            cursor: pointer;
+            padding: 10px;
+            margin: 20px;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        .desktop-icon:hover { background: rgba(255,255,255,0.2); }
+        .desktop-icon img { width: 48px; height: 48px; margin-bottom: 5px; }
+
+        /* --- نافذة البرنامج --- */
+        .window-frame {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 900px;
+            height: 600px;
+            background: #fff;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none; /* مخفي في البداية */
+            flex-direction: column;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .window-frame.open { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+        .title-bar {
+            background: linear-gradient(to bottom, #bfcdac 0%, #a4b38a 100%); /* لون SPSS القديم المميز */
+            padding: 5px 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid #999;
         }
+        .title-text { font-size: 14px; font-weight: bold; color: #333; }
+        .window-controls span { margin-left: 5px; cursor: pointer; border: 1px solid #888; padding: 0 5px; background: #eee; }
 
-        .stepper {
+        .menu-bar {
+            background: #f0f0f0;
+            padding: 2px 5px;
+            border-bottom: 1px solid #ccc;
+            font-size: 13px;
             display: flex;
-            border-bottom: 1px solid #eee;
-            background: #fff;
+            gap: 15px;
         }
+        .menu-item { cursor: pointer; position: relative; padding: 2px 5px; }
+        .menu-item:hover { background: #d0e0ff; }
 
-        .step {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            font-size: 0.9rem;
-            color: #999;
-            border-left: 1px solid #f0f0f0;
-            transition: 0.3s;
-            cursor: default;
-        }
-        .step.active {
-            background: #ecf6ff;
-            color: var(--primary);
-            font-weight: bold;
-            border-bottom: 3px solid var(--primary);
-        }
-
-        .content-area {
-            flex: 1;
-            padding: 30px;
-            position: relative;
-        }
-
-        .panel { display: none; animation: fadeIn 0.5s; }
-        .panel.active { display: block; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* جداول المحاكاة */
-        table.sim-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 0.95rem;
-        }
-        table.sim-table th, table.sim-table td {
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-            text-align: center;
-        }
-        table.sim-table th { background-color: #f8f9fa; color: var(--primary); }
-
-        /* الأزرار */
-        .controls {
-            padding: 20px;
-            background: #fafafa;
-            border-top: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-        }
-        .btn {
-            padding: 10px 30px;
-            border: none;
-            border-radius: 5px;
-            font-family: 'Cairo', sans-serif;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn-next { background: var(--primary); color: white; }
-        .btn-next:hover { background: #1a3c70; }
-        .btn-prev { background: #e0e0e0; color: #555; }
-        .btn-print { background: #d32f2f; color: white; display: none; }
-        .btn-print:hover { background: #b71c1c; }
-
-        /* --- تصميم التقرير (يظهر فقط في الخطوة الأخيرة والطباعة) --- */
-        #final-report {
-            border: 1px solid #ddd;
-            padding: 40px; /* هامش للورقة */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%; right: 0;
             background: white;
-            width: 100%;
-            box-sizing: border-box;
-            display: none; /* مخفي افتراضياً */
+            border: 1px solid #999;
+            min-width: 200px;
+            display: none;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
         }
-        
-        /* تنسيقات التقرير الداخلية */
-        .report-header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .report-logo { font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
-        .report-meta { font-size: 0.9rem; color: #555; }
-        
-        .report-section { margin-bottom: 30px; }
-        .report-section h3 { 
-            font-size: 1.1rem; 
-            background: #eee; 
-            padding: 5px 10px; 
-            border-right: 4px solid var(--primary); 
-        }
+        .dropdown-item { padding: 5px 15px; cursor: pointer; display: flex; justify-content: space-between; }
+        .dropdown-item:hover { background: #2c5aa0; color: white; }
+        .dropdown-item span { font-size: 10px; }
 
-        /* --- إعدادات الطباعة (السر في إصلاح المشاكل) --- */
+        .toolbar { background: #f0f0f0; padding: 5px; border-bottom: 1px solid #ccc; display: flex; gap: 10px; }
+        .tool-icon { width: 20px; height: 20px; background: #ddd; border: 1px solid #999; text-align: center; line-height: 18px; font-size: 12px; }
+
+        /* --- منطقة الشبكة (Grid) --- */
+        .grid-area { flex: 1; overflow: auto; background: #fff; position: relative; }
+        table.spss-grid {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 12px;
+        }
+        table.spss-grid th, table.spss-grid td {
+            border: 1px solid #ccc;
+            padding: 4px;
+            text-align: center;
+            min-width: 60px;
+            height: 20px;
+        }
+        table.spss-grid th { background: #e0e0e0; font-weight: normal; border-bottom: 2px solid #999; }
+        table.spss-grid tr:first-child th { background: #e0e0e0; font-weight: bold; }
+        
+        /* --- التبويبات السفلية --- */
+        .bottom-tabs {
+            display: flex;
+            background: #d4d4d4;
+            padding-left: 20px;
+            border-top: 1px solid #999;
+        }
+        .tab-btn {
+            padding: 5px 20px;
+            font-size: 12px;
+            cursor: pointer;
+            border-right: 1px solid #999;
+            background: #d4d4d4;
+        }
+        .tab-btn.active { background: #fff; font-weight: bold; border-top: 2px solid #ff9800; }
+
+        /* --- التعليمات (Wizard) --- */
+        .guide-bubble {
+            position: absolute;
+            background: #ffeb3b;
+            color: #000;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            font-size: 14px;
+            z-index: 2000;
+            max-width: 250px;
+            border: 1px solid #fbc02d;
+            animation: bounce 1s infinite alternate;
+        }
+        .guide-bubble::after {
+            content: ''; position: absolute;
+            border-width: 10px; border-style: solid;
+        }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+
+        /* --- النوافذ المنبثقة (Dialogs) --- */
+        .dialog-overlay {
+            position: absolute; top:0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.1);
+            display: none; z-index: 500;
+            justify-content: center; align-items: center;
+        }
+        .dialog-box {
+            width: 500px; height: 350px;
+            background: #f0f0f0;
+            border: 2px solid #333;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column;
+        }
+        .dialog-content { flex: 1; padding: 15px; display: flex; gap: 10px; }
+        .var-list { border: 1px solid #999; background: white; flex: 1; padding: 5px; overflow-y: auto; }
+        .var-item { font-size: 12px; padding: 2px; cursor: pointer; }
+        .var-item:hover { background: #2c5aa0; color: white; }
+        .target-list { border: 1px solid #999; background: white; flex: 1; padding: 5px; }
+        .dialog-buttons { display: flex; flex-direction: column; gap: 5px; justify-content: center; padding: 0 10px; }
+        .dialog-buttons button { width: 80px; }
+
+        /* --- نافذة المخرجات (Output) --- */
+        #output-window { z-index: 600; background: white; }
+        .output-content { padding: 20px; overflow-y: auto; height: 100%; font-family: 'Times New Roman', serif; }
+        
+        /* الطباعة */
         @media print {
-            body { background: white; padding: 0; }
-            .app-container, .controls, .stepper, header { display: none !important; }
-            #final-report { 
+            .desktop-icon, .guide-bubble { display: none; }
+            #output-window { 
                 display: block !important; 
-                border: none; 
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 100%; 
-                margin: 0;
-                padding: 20px;
+                position: static !important; 
+                width: 100% !important; 
+                height: auto !important;
+                border: none !important;
+                transform: none !important;
             }
-            .panel { display: none !important; }
-            /* إجبار المتصفح على طباعة الألوان */
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            .window-frame:not(#output-window) { display: none !important; }
+            body { background: white !important; height: auto; overflow: visible; }
         }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <header>
-        <div style="font-weight:bold;">IBM SPSS Statistics</div>
-        <div style="font-size:0.9rem;">محاكاة تعليمية - المحور الثالث</div>
-    </header>
+<div class="desktop-icon" onclick="launchApp()">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e6/SPSS_Icon.png" alt="SPSS" style="background:white; border-radius:5px;">
+    <div>IBM SPSS Statistics</div>
+</div>
 
-    <div class="stepper">
-        <div class="step active" id="step-btn-1">1. تعريف المتغيرات</div>
-        <div class="step" id="step-btn-2">2. تفريغ البيانات</div>
-        <div class="step" id="step-btn-3">3. إجراء التحليل</div>
-        <div class="step" id="step-btn-4">4. التقرير النهائي</div>
+<div class="guide-bubble" id="guide-1" style="top: 100px; right: 100px;">
+    مرحباً لمياء! 👋<br>لنبدأ العمل. اضغطي على أيقونة البرنامج لفتحه.
+</div>
+
+<div class="window-frame" id="main-window">
+    <div class="title-bar">
+        <div class="title-text">Sans titre1 [Ensemble_de_données0] - IBM SPSS Statistics Editeur de données</div>
+        <div class="window-controls"><span>_</span><span>□</span><span onclick="closeApp()" style="background:#e81123; color:white;">X</span></div>
+    </div>
+    
+    <div class="menu-bar">
+        <div class="menu-item">Fichier</div>
+        <div class="menu-item">Edition</div>
+        <div class="menu-item">Affichage</div>
+        <div class="menu-item">Données</div>
+        <div class="menu-item">Transformer</div>
+        <div class="menu-item" id="menu-analyse" onclick="toggleAnalyse()">Analyse
+            <div class="dropdown-menu" id="dropdown-analyse">
+                <div class="dropdown-item">Rapports <span>►</span></div>
+                <div class="dropdown-item" onclick="openFreqDialog()">Statistiques descriptives <span>►</span></div>
+                <div class="dropdown-item">Tableaux croisés</div>
+                <div class="dropdown-item">Moyennes</div>
+            </div>
+        </div>
+        <div class="menu-item">Graphes</div>
+        <div class="menu-item">Utilitaires</div>
     </div>
 
-    <div class="content-area">
+    <div class="toolbar">
+        <div class="tool-icon">📂</div>
+        <div class="tool-icon">💾</div>
+        <div class="tool-icon">🖨️</div>
+        <div class="tool-icon">↩️</div>
+    </div>
+
+    <div class="grid-area" id="grid-container">
+        </div>
+
+    <div class="bottom-tabs">
+        <div class="tab-btn active" id="tab-data" onclick="switchView('data')">Vue de données (بيانات)</div>
+        <div class="tab-btn" id="tab-var" onclick="switchView('var')">Vue des variables (متغيرات)</div>
+    </div>
+</div>
+
+<div class="dialog-overlay" id="freq-dialog">
+    <div class="dialog-box">
+        <div class="title-bar" style="background:#f0f0f0; border-bottom:1px solid #ccc;">
+            <span style="color:black">Fréquences (التكرارات)</span>
+            <span onclick="closeDialog()" style="cursor:pointer">X</span>
+        </div>
+        <div class="dialog-content">
+            <div class="var-list">
+                <div class="var-item">الجنس [Q1.1]</div>
+                <div class="var-item">كم عمرك [Q1.2]</div>
+                <div class="var-item">هل تعمل [Q1.3]</div>
+                <div class="var-item" onclick="selectVar(this)">رضاك عن ظروف العمل [Satisf]</div>
+            </div>
+            <div class="dialog-buttons">
+                <button onclick="moveVar()">➜</button>
+            </div>
+            <div class="target-list" id="target-box"></div>
+            <div style="display:flex; flex-direction:column; gap:5px; margin-right:10px;">
+                <button>Statistiques...</button>
+                <button>Graphiques...</button>
+                <button>Format...</button>
+            </div>
+        </div>
+        <div style="padding:10px; display:flex; justify-content:flex-end; gap:5px;">
+            <button onclick="runAnalysis()">OK</button>
+            <button onclick="closeDialog()">Coller</button>
+            <button onclick="closeDialog()">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<div class="window-frame" id="output-window">
+    <div class="title-bar">
+        <div class="title-text">Output1 [Document1] - IBM SPSS Statistics Viewer</div>
+        <div class="window-controls"><span onclick="closeOutput()" style="background:#e81123; color:white;">X</span></div>
+    </div>
+    <div class="menu-bar">
+        <div class="menu-item">Fichier</div>
+        <div class="menu-item" onclick="printPage()"><b>🖨️ طباعة التقرير (PDF)</b></div>
+    </div>
+    <div class="output-content">
+        <h3 style="text-align:center; border-bottom:1px solid #000;">Frequencies (نتائج التحليل)</h3>
         
-        <div class="panel active" id="panel-1">
-            <h2 style="color:var(--primary)">1. نافذة المتغيرات (Variable View)</h2>
-            <p>نقوم بتعريف خصائص الاستبيان. لاحظي كيف قمنا بترميز "الجنس" و"الرضا":</p>
-            <table class="sim-table">
-                <thead>
-                    <tr><th>#</th><th>Nom (الاسم)</th><th>Type</th><th>Libellé (الوصف)</th><th>Values (القيم)</th><th>Mesure</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>1</td><td style="color:blue">Sexe</td><td>Numérique</td><td>الجنس</td><td>{1=ذكر, 2=أنثى}</td><td>Nominal 🎈</td></tr>
-                    <tr><td>2</td><td style="color:blue">Satisf</td><td>Numérique</td><td>الرضا الوظيفي</td><td>{1=غير راض... 3=راض}</td><td>Ordinal 📊</td></tr>
-                </tbody>
-            </table>
+        <p><b>Statistiques</b><br>رضاك عن ظروف العمل</p>
+        <table border="1" style="border-collapse:collapse; width:50%; font-size:12px; margin-bottom:20px;">
+            <tr><td>N Valid</td><td>10</td></tr>
+            <tr><td>Missing</td><td>0</td></tr>
+            <tr><td>Moyenne (Mean)</td><td>2.00</td></tr>
+            <tr><td>Ecart-type</td><td>0.94</td></tr>
+        </table>
+
+        <p><b>Tableau de fréquences</b></p>
+        <table border="1" style="border-collapse:collapse; width:80%; font-size:12px; margin-bottom:20px;">
+            <tr style="background:#eee;"><th>Valid</th><th>Frequency</th><th>Percent</th><th>Valid Percent</th></tr>
+            <tr><td>غير راض (1)</td><td>4</td><td>40.0</td><td>40.0</td></tr>
+            <tr><td>محايد (2)</td><td>2</td><td>20.0</td><td>20.0</td></tr>
+            <tr><td>راض (3)</td><td>4</td><td>40.0</td><td>40.0</td></tr>
+            <tr><td><b>Total</b></td><td><b>10</b></td><td><b>100.0</b></td><td><b>100.0</b></td></tr>
+        </table>
+
+        <p><b>Diagramme en bâtons</b></p>
+        <div style="width:400px;">
+            <canvas id="outputChart"></canvas>
         </div>
-
-        <div class="panel" id="panel-2">
-            <h2 style="color:var(--primary)">2. نافذة البيانات (Data View)</h2>
-            <p>تم تفريغ 10 استمارات كمثال (كما في الدرس صفحة 29):</p>
-            <table class="sim-table">
-                <thead><tr><th>#</th><th>Sexe</th><th>Satisf</th></tr></thead>
-                <tbody>
-                    <tr><td>1</td><td>1 (ذكر)</td><td>3 (راض)</td></tr>
-                    <tr><td>2</td><td>2 (أنثى)</td><td>1 (غير راض)</td></tr>
-                    <tr><td>3</td><td>1 (ذكر)</td><td>3 (راض)</td></tr>
-                    <tr><td>4</td><td>2 (أنثى)</td><td>2 (محايد)</td></tr>
-                    <tr><td>5</td><td>1 (ذكر)</td><td>1 (غير راض)</td></tr>
-                    <tr><td colspan="3" style="color:#888;">... بقية البيانات (10 أشخاص) ...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="panel" id="panel-3">
-            <h2 style="color:var(--primary)">3. تنفيذ التحليل (Analyse)</h2>
-            <div style="text-align:center; padding: 40px;">
-                <p style="font-size:1.2rem;">اضغطي على الزر لمحاكاة الأمر:</p>
-                <code style="background:#333; color:#0f0; padding:10px; display:block; margin:20px auto; width:fit-content; direction:ltr;">
-                    Analyse > Statistiques descriptives > Fréquences
-                </code>
-                <button onclick="simulateProcessing()" class="btn" style="background:#fdbb2d; color:#000; margin-top:20px;">
-                    ⚙️ بدء المعالجة
-                </button>
-                <div id="loader" style="display:none; margin-top:20px; font-weight:bold; color:green;">
-                    جاري الحساب وإنشاء الرسوم البيانية...
-                </div>
-            </div>
-        </div>
-
-        <div class="panel" id="panel-4">
-            <h2 style="color:var(--primary); text-align:center;">تم إنشاء التقرير بنجاح! ✅</h2>
-            <p style="text-align:center;">يمكنك مراجعة التقرير أدناه، ثم الضغط على "طباعة / حفظ PDF".</p>
-            
-            <div id="final-report" style="display:block; border:1px solid #ccc; box-shadow:0 0 15px rgba(0,0,0,0.1);">
-                <div class="report-header">
-                    <div class="report-logo">جامعة امحمد بوقرة - بومرداس</div>
-                    <div class="report-meta">كلية العلوم الاقتصادية والتجارية وعلوم التسيير</div>
-                    <div class="report-meta">مقياس: تقنيات الاستقصاء (SPSS) | الطالبة: لمياء</div>
-                </div>
-
-                <div class="report-section">
-                    <h3>1. Statistiques Descriptives (الإحصاء الوصفي)</h3>
-                    <table class="sim-table" style="border:2px solid #000; width:100%;">
-                        <tr style="background:#eee;">
-                            <th>المتغير</th>
-                            <th>N (العدد)</th>
-                            <th>Moyenne (المتوسط)</th>
-                            <th>Ecart-type (الانحراف)</th>
-                        </tr>
-                        <tr>
-                            <td>الرضا الوظيفي</td>
-                            <td>10</td>
-                            <td>2.00</td>
-                            <td>0.94</td>
-                        </tr>
-                    </table>
-                    <p style="font-size:0.9rem;">* تعليق: المتوسط الحسابي هو 2.00 مما يدل على رضا متوسط.</p>
-                </div>
-
-                <div class="report-section">
-                    <h3>2. Tableau de Fréquence (جدول التكرارات)</h3>
-                    <table class="sim-table" style="width:100%;">
-                        <thead>
-                            <tr>
-                                <th>الاستجابة</th>
-                                <th>Effectifs (التكرار)</th>
-                                <th>Pourcentage %</th>
-                                <th>Cumul %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>غير راض (1)</td><td>4</td><td>40.0%</td><td>40.0%</td></tr>
-                            <tr><td>محايد (2)</td><td>2</td><td>20.0%</td><td>60.0%</td></tr>
-                            <tr><td>راض (3)</td><td>4</td><td>40.0%</td><td>100.0%</td></tr>
-                            <tr style="font-weight:bold; background:#eee;"><td>المجموع Total</td><td>10</td><td>100.0%</td><td></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="report-section">
-                    <h3>3. Diagramme en bâtons (التمثيل البياني)</h3>
-                    <div style="width: 70%; margin: 0 auto;">
-                        <canvas id="spssChart"></canvas>
-                    </div>
-                </div>
-
-                <div style="margin-top:40px; border-top:1px solid #000; padding-top:10px; display:flex; justify-content:space-between; font-size:0.8rem;">
-                    <span>Output Generated by IBM SPSS Statistics</span>
-                    <span>Page 1 of 1</span>
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="controls">
-        <button class="btn btn-prev" id="prevBtn" onclick="move(-1)" disabled>السابق</button>
-        <button class="btn btn-next" id="nextBtn" onclick="move(1)">التالي</button>
-        <button class="btn btn-print" id="printBtn" onclick="printReport()">🖨️ طباعة / حفظ PDF</button>
     </div>
 </div>
 
 <script>
-    let currentStep = 1;
-    let chartRendered = false;
+    // --- البيانات ---
+    [span_2](start_span)// صفحة 15 من الملف[span_2](end_span)
+    const vars = [
+        {name: "Q1.1", type: "Num", label: "الجنس", align:"Right", measure:"Nominal"},
+        {name: "Q1.2", type: "Num", label: "كم عمرك", align:"Right", measure:"Echelle"},
+        {name: "Q1.3", type: "Num", label: "هل تعمل", align:"Right", measure:"Nominal"},
+        {name: "Satisf", type: "Num", label: "رضاك عن ظروف العمل", align:"Right", measure:"Ordinal"}
+    ];
 
-    function move(dir) {
-        // إخفاء الحالي
-        document.getElementById(`panel-${currentStep}`).classList.remove('active');
-        document.getElementById(`step-btn-${currentStep}`).classList.remove('active');
-        
-        currentStep += dir;
-        
-        // إظهار الجديد
-        document.getElementById(`panel-${currentStep}`).classList.add('active');
-        document.getElementById(`step-btn-${currentStep}`).classList.add('active');
+    [span_3](start_span)// صفحة 29 من الملف[span_3](end_span)
+    const data = [
+        [1, 24, 1, 3], [2, 22, 2, 1], [1, 25, 1, 3], [2, 23, 2, 2], [1, 30, 1, 1],
+        [1, 28, 1, 3], [2, 21, 2, 3], [2, 26, 2, 1], [1, 24, 1, 2], [1, 29, 1, 1]
+    ];
 
-        // تحديث الأزرار
-        document.getElementById('prevBtn').disabled = (currentStep === 1);
+    let currentStep = 0;
+
+    // --- الوظائف ---
+
+    function launchApp() {
+        document.getElementById('guide-1').style.display = 'none';
+        document.getElementById('main-window').classList.add('open');
+        showGuide(2, "ممتاز! 🌟<br>نحن الآن في واجهة البيانات.<br>لنذهب أولاً لتعريف الأسئلة. اضغطي على <b>'Vue des variables'</b> في الأسفل.", 600, 500);
+        renderDataGrid();
+    }
+
+    function switchView(view) {
+        const grid = document.getElementById('grid-container');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         
-        if (currentStep === 4) {
-            document.getElementById('nextBtn').style.display = 'none';
-            document.getElementById('printBtn').style.display = 'block';
-            if (!chartRendered) renderChart();
+        if(view === 'var') {
+            document.getElementById('tab-var').classList.add('active');
+            renderVarGrid();
+            if(currentStep === 0) {
+                currentStep = 1;
+                showGuide(3, "رائع! 👏<br>هنا نعرف المتغيرات (Nom, Type...) كما في الصفحة 8.<br>لقد قمت بملئها لكِ تلقائياً.<br>الآن عودي لتبويب <b>'Vue de données'</b> لنرى البيانات.", 600, 500);
+            }
         } else {
-            document.getElementById('nextBtn').style.display = 'block';
-            document.getElementById('printBtn').style.display = 'none';
+            document.getElementById('tab-data').classList.add('active');
+            renderDataGrid();
+            if(currentStep === 1) {
+                currentStep = 2;
+                showGuide(4, "الآن سنقوم بالتحليل!<br>اضغطي على قائمة <b>'Analyse'</b> في الأعلى.<br>تم <b>'Statistiques descriptives'</b>.", 300, 100);
+            }
         }
     }
 
-    function simulateProcessing() {
-        document.getElementById('loader').style.display = 'block';
-        setTimeout(() => {
-            move(1); // انتقال تلقائي بعد ثانية ونصف
-        }, 1500);
-    }
-
-    function renderChart() {
-        const ctx = document.getElementById('spssChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['غير راض (1)', 'محايد (2)', 'راض (3)'],
-                datasets: [{
-                    label: 'عدد الموظفين (Effectifs)',
-                    data: [4, 2, 4],
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.6)', // أحمر
-                        'rgba(54, 162, 235, 0.6)', // أزرق
-                        'rgba(75, 192, 192, 0.6)'  // أخضر
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(75, 192, 192, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                animation: false, // مهم جداً للطباعة لتظهر الأعمدة فوراً
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    title: { display: true, text: 'توزيع الرضا عن ظروف العمل' }
-                }
-            }
+    function renderVarGrid() {
+        let html = '<table class="spss-grid"><thead><tr><th></th><th>Nom</th><th>Type</th><th>Largeur</th><th>Décimales</th><th>Libellé</th><th>Valeurs</th><th>Mesure</th></tr></thead><tbody>';
+        vars.forEach((v,i) => {
+            html += `<tr><td style="background:#eee">${i+1}</td><td>${v.name}</td><td>${v.type}</td><td>8</td><td>0</td><td>${v.label}</td><td>...</td><td>${v.measure}</td></tr>`;
         });
-        chartRendered = true;
+        html += '</tbody></table>';
+        document.getElementById('grid-container').innerHTML = html;
     }
 
-    function printReport() {
-        window.print();
+    function renderDataGrid() {
+        let html = '<table class="spss-grid"><thead><tr><th></th>';
+        vars.forEach(v => html += `<th>${v.name}</th>`);
+        html += '</tr></thead><tbody>';
+        data.forEach((row,i) => {
+            html += `<tr><td style="background:#eee">${i+1}</td>`;
+            row.forEach(val => html += `<td>${val}</td>`);
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('grid-container').innerHTML = html;
     }
+
+    function toggleAnalyse() {
+        const menu = document.getElementById('dropdown-analyse');
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function openFreqDialog() {
+        document.getElementById('dropdown-analyse').style.display = 'none';
+        document.getElementById('freq-dialog').style.display = 'flex';
+        showGuide(5, "هذه نافذة التكرارات (صفحة 25).<br>1. اختاري 'رضاك عن ظروف العمل'.<br>2. اضغطي السهم لنقله.<br>3. اضغطي OK.", 50, 50, 'relative');
+        // remove bubble from body and append to dialog for correct positioning
+        const bubble = document.getElementById('guide-bubble');
+        if(bubble) {
+            bubble.style.position = 'absolute';
+            bubble.style.top = '-80px';
+            bubble.style.right = '0';
+            document.querySelector('.dialog-box').appendChild(bubble);
+        }
+    }
+
+    function selectVar(el) {
+        document.querySelectorAll('.var-item').forEach(d => d.style.background = 'transparent');
+        document.querySelectorAll('.var-item').forEach(d => d.style.color = 'black');
+        el.style.background = '#2c5aa0';
+        el.style.color = 'white';
+        el.classList.add('selected');
+    }
+
+    function moveVar() {
+        const selected = document.querySelector('.var-item.selected');
+        if(selected) {
+            document.getElementById('target-box').innerHTML = `<div class="var-item">${selected.innerText}</div>`;
+            selected.style.display = 'none';
+        }
+    }
+
+    function runAnalysis() {
+        document.getElementById('freq-dialog').style.display = 'none';
+        const win = document.getElementById('output-window');
+        win.classList.add('open');
+        win.style.zIndex = 1000;
+        
+        // رسم الشارت
+        setTimeout(() => {
+            const ctx = document.getElementById('outputChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['غير راض', 'محايد', 'راض'],
+                    datasets: [{
+                        label: 'Frequency',
+                        data: [4, 2, 4],
+                        backgroundColor: '#bfcdac',
+                        borderColor: '#333',
+                        borderWidth: 1
+                    }]
+                },
+                options: { animation: false }
+            });
+        }, 100);
+
+        const bubble = document.getElementById('guide-bubble');
+        if(bubble) bubble.style.display = 'none';
+        
+        alert("مبروك لمياء! 🎉\nلقد أتممت التحليل بنجاح.\nيمكنك الآن طباعة التقرير من قائمة Fichier.");
+    }
+
+    function closeOutput() { document.getElementById('output-window').classList.remove('open'); }
+    function closeDialog() { document.getElementById('freq-dialog').style.display = 'none'; }
+    function closeApp() { location.reload(); }
+    
+    function showGuide(step, text, top, left, pos='absolute') {
+        let b = document.getElementById('guide-bubble');
+        if(!b) {
+            b = document.createElement('div');
+            b.id = 'guide-bubble';
+            b.className = 'guide-bubble';
+            document.body.appendChild(b);
+        }
+        b.innerHTML = text;
+        b.style.position = pos;
+        if(pos === 'absolute') {
+            b.style.top = top + 'px';
+            b.style.left = left + 'px'; // Actually right in RTL usually, but strict px here
+        }
+        b.style.display = 'block';
+    }
+
+    function printPage() { window.print(); }
+
 </script>
-
 </body>
 </html>
