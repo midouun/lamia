@@ -3,471 +3,423 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPSS Simulator - Lamia Edition</title>
-    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Lamia's PC - SPSS Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         :root {
-            --win-blue: #185a9d;
-            --win-grey: #f0f0f0;
-            --spss-header: #e3e3e3;
-            --highlight: #ffeb3b;
+            --win-color: #f0f0f0;
+            --win-header: #2c5aa0; /* SPSS Blue */
+            --taskbar-color: #1e1e1e;
+            --accent: #0078d7;
         }
 
         body {
             margin: 0;
             overflow: hidden;
-            font-family: 'Segoe UI', 'Cairo', sans-serif;
-            background: url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
-            background-size: cover;
+            font-family: 'Tajawal', sans-serif;
+            background: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
             height: 100vh;
             user-select: none;
         }
 
         /* --- سطح المكتب --- */
-        .desktop-icon {
+        .desktop {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: calc(100% - 40px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: flex-end; /* أيقونات على اليمين */
+        }
+
+        .icon {
             width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
             text-align: center;
             color: white;
-            text-shadow: 1px 1px 3px black;
-            cursor: pointer;
+            text-shadow: 1px 1px 2px black;
             padding: 10px;
-            margin: 20px;
             border-radius: 5px;
             transition: 0.2s;
         }
-        .desktop-icon:hover { background: rgba(255,255,255,0.2); }
-        .desktop-icon img { width: 48px; height: 48px; margin-bottom: 5px; }
+        .icon:hover { background: rgba(255,255,255,0.2); }
+        .icon img { width: 48px; height: 48px; margin-bottom: 5px; }
+        .icon span { font-size: 14px; font-weight: bold; }
 
-        /* --- نافذة البرنامج --- */
-        .window-frame {
+        /* --- شريط المهام --- */
+        .taskbar {
             position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            width: 900px;
-            height: 600px;
-            background: #fff;
-            border: 1px solid #333;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: none; /* مخفي في البداية */
-            flex-direction: column;
-            border-radius: 4px;
-            opacity: 0;
-            transition: opacity 0.3s;
+            bottom: 0; left: 0; width: 100%; height: 40px;
+            background: var(--taskbar-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            z-index: 1000;
         }
-        .window-frame.open { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
-
-        .title-bar {
-            background: linear-gradient(to bottom, #bfcdac 0%, #a4b38a 100%); /* لون SPSS القديم المميز */
+        .start-btn {
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
             padding: 5px 10px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .start-btn:hover { background: rgba(255,255,255,0.1); }
+        .clock { color: white; font-size: 0.9rem; margin-left: 20px; }
+
+        /* --- النوافذ (نظام النوافذ) --- */
+        .window {
+            position: absolute;
+            background: #fff;
+            border: 1px solid #555;
+            box-shadow: 5px 10px 20px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            border-radius: 6px;
+            overflow: hidden;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            resize: both;
+        }
+        .window.active { z-index: 500; }
+        @keyframes popIn { from { transform: translate(-50%, -60%) scale(0.9); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+        .win-header {
+            background: var(--win-header);
+            color: white;
+            padding: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #999;
+            cursor: move;
         }
-        .title-text { font-size: 14px; font-weight: bold; color: #333; }
-        .window-controls span { margin-left: 5px; cursor: pointer; border: 1px solid #888; padding: 0 5px; background: #eee; }
+        .win-controls span {
+            cursor: pointer; padding: 2px 8px; margin-left: 2px; background: rgba(255,255,255,0.2);
+        }
+        .win-controls span.close:hover { background: red; }
 
-        .menu-bar {
-            background: #f0f0f0;
-            padding: 2px 5px;
-            border-bottom: 1px solid #ccc;
-            font-size: 13px;
-            display: flex;
-            gap: 15px;
-        }
-        .menu-item { cursor: pointer; position: relative; padding: 2px 5px; }
-        .menu-item:hover { background: #d0e0ff; }
+        .win-body { flex: 1; overflow: auto; position: relative; background: #fff; display: flex; flex-direction: column; }
 
-        .dropdown-menu {
-            position: absolute;
-            top: 100%; right: 0;
-            background: white;
-            border: 1px solid #999;
-            min-width: 200px;
-            display: none;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            z-index: 100;
-        }
-        .dropdown-item { padding: 5px 15px; cursor: pointer; display: flex; justify-content: space-between; }
-        .dropdown-item:hover { background: #2c5aa0; color: white; }
-        .dropdown-item span { font-size: 10px; }
-
-        .toolbar { background: #f0f0f0; padding: 5px; border-bottom: 1px solid #ccc; display: flex; gap: 10px; }
-        .tool-icon { width: 20px; height: 20px; background: #ddd; border: 1px solid #999; text-align: center; line-height: 18px; font-size: 12px; }
-
-        /* --- منطقة الشبكة (Grid) --- */
-        .grid-area { flex: 1; overflow: auto; background: #fff; position: relative; }
-        table.spss-grid {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 12px;
-        }
-        table.spss-grid th, table.spss-grid td {
-            border: 1px solid #ccc;
-            padding: 4px;
-            text-align: center;
-            min-width: 60px;
-            height: 20px;
-        }
-        table.spss-grid th { background: #e0e0e0; font-weight: normal; border-bottom: 2px solid #999; }
-        table.spss-grid tr:first-child th { background: #e0e0e0; font-weight: bold; }
+        /* --- واجهة SPSS --- */
+        .spss-menu { background: #f0f0f0; border-bottom: 1px solid #ccc; padding: 5px; display: flex; gap: 15px; font-size: 13px; }
+        .menu-item { cursor: pointer; position: relative; }
+        .menu-item:hover { color: blue; }
         
-        /* --- التبويبات السفلية --- */
-        .bottom-tabs {
-            display: flex;
-            background: #d4d4d4;
-            padding-left: 20px;
-            border-top: 1px solid #999;
-        }
-        .tab-btn {
-            padding: 5px 20px;
-            font-size: 12px;
-            cursor: pointer;
-            border-right: 1px solid #999;
-            background: #d4d4d4;
-        }
-        .tab-btn.active { background: #fff; font-weight: bold; border-top: 2px solid #ff9800; }
+        .spss-toolbar { background: #f0f0f0; padding: 5px; border-bottom: 1px solid #ccc; display: flex; gap: 10px; }
+        .tool-btn { width: 24px; height: 24px; background: #ddd; border: 1px solid #999; text-align: center; font-size: 12px; cursor: pointer; }
 
-        /* --- التعليمات (Wizard) --- */
-        .guide-bubble {
-            position: absolute;
-            background: #ffeb3b;
-            color: #000;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            font-size: 14px;
+        table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.grid th, table.grid td { border: 1px solid #ccc; padding: 4px; text-align: center; }
+        table.grid th { background: #e9e9e9; font-weight: normal; border-bottom: 2px solid #999; }
+
+        .tabs { display: flex; background: #dcdcdc; border-top: 1px solid #999; margin-top: auto; }
+        .tab { padding: 5px 20px; cursor: pointer; border-right: 1px solid #999; font-size: 12px; }
+        .tab.active { background: #fff; font-weight: bold; border-top: 2px solid #ff9800; }
+
+        /* --- المساعد الذكي --- */
+        .assistant-container {
+            position: absolute; bottom: 60px; right: 20px;
+            display: flex; align-items: flex-end; gap: 10px;
             z-index: 2000;
-            max-width: 250px;
-            border: 1px solid #fbc02d;
-            animation: bounce 1s infinite alternate;
         }
-        .guide-bubble::after {
-            content: ''; position: absolute;
-            border-width: 10px; border-style: solid;
+        .assistant-avatar {
+            width: 60px; height: 60px;
+            background: white; border-radius: 50%;
+            border: 2px solid var(--accent);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            animation: float 3s ease-in-out infinite;
         }
-        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+        .assistant-bubble {
+            background: white; padding: 15px; border-radius: 15px 15px 0 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            max-width: 250px; font-size: 14px; position: relative;
+            animation: slideIn 0.5s ease;
+            display: none;
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* --- النوافذ المنبثقة (Dialogs) --- */
-        .dialog-overlay {
-            position: absolute; top:0; left:0; right:0; bottom:0;
-            background: rgba(0,0,0,0.1);
-            display: none; z-index: 500;
-            justify-content: center; align-items: center;
-        }
-        .dialog-box {
-            width: 500px; height: 350px;
-            background: #f0f0f0;
-            border: 2px solid #333;
-            box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column;
-        }
-        .dialog-content { flex: 1; padding: 15px; display: flex; gap: 10px; }
-        .var-list { border: 1px solid #999; background: white; flex: 1; padding: 5px; overflow-y: auto; }
-        .var-item { font-size: 12px; padding: 2px; cursor: pointer; }
-        .var-item:hover { background: #2c5aa0; color: white; }
-        .target-list { border: 1px solid #999; background: white; flex: 1; padding: 5px; }
-        .dialog-buttons { display: flex; flex-direction: column; gap: 5px; justify-content: center; padding: 0 10px; }
-        .dialog-buttons button { width: 80px; }
+        /* --- نافذة الفيديوهات --- */
+        .video-list { list-style: none; padding: 0; margin: 0; }
+        .video-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .video-item:hover { background: #f0f8ff; }
+        .video-thumb { width: 40px; height: 30px; background: #000; border-radius: 3px; }
 
-        /* --- نافذة المخرجات (Output) --- */
-        #output-window { z-index: 600; background: white; }
-        .output-content { padding: 20px; overflow-y: auto; height: 100%; font-family: 'Times New Roman', serif; }
-        
-        /* الطباعة */
-        @media print {
-            .desktop-icon, .guide-bubble { display: none; }
-            #output-window { 
-                display: block !important; 
-                position: static !important; 
-                width: 100% !important; 
-                height: auto !important;
-                border: none !important;
-                transform: none !important;
-            }
-            .window-frame:not(#output-window) { display: none !important; }
-            body { background: white !important; height: auto; overflow: visible; }
-        }
+        /* --- القوائم المنبثقة --- */
+        .dropdown { position: absolute; top: 100%; right: 0; background: white; border: 1px solid #999; min-width: 180px; display: none; box-shadow: 3px 3px 10px rgba(0,0,0,0.2); z-index: 100; }
+        .dd-item { padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; }
+        .dd-item:hover { background: var(--win-header); color: white; }
+
     </style>
 </head>
 <body>
 
-<div class="desktop-icon" onclick="launchApp()">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e6/SPSS_Icon.png" alt="SPSS" style="background:white; border-radius:5px;">
-    <div>IBM SPSS Statistics</div>
-</div>
-
-<div class="guide-bubble" id="guide-1" style="top: 100px; right: 100px;">
-    مرحباً لمياء! 👋<br>لنبدأ العمل. اضغطي على أيقونة البرنامج لفتحه.
-</div>
-
-<div class="window-frame" id="main-window">
-    <div class="title-bar">
-        <div class="title-text">Sans titre1 [Ensemble_de_données0] - IBM SPSS Statistics Editeur de données</div>
-        <div class="window-controls"><span>_</span><span>□</span><span onclick="closeApp()" style="background:#e81123; color:white;">X</span></div>
-    </div>
-    
-    <div class="menu-bar">
-        <div class="menu-item">Fichier</div>
-        <div class="menu-item">Edition</div>
-        <div class="menu-item">Affichage</div>
-        <div class="menu-item">Données</div>
-        <div class="menu-item">Transformer</div>
-        <div class="menu-item" id="menu-analyse" onclick="toggleAnalyse()">Analyse
-            <div class="dropdown-menu" id="dropdown-analyse">
-                <div class="dropdown-item">Rapports <span>►</span></div>
-                <div class="dropdown-item" onclick="openFreqDialog()">Statistiques descriptives <span>►</span></div>
-                <div class="dropdown-item">Tableaux croisés</div>
-                <div class="dropdown-item">Moyennes</div>
-            </div>
+    <div class="desktop">
+        <div class="icon" onclick="openApp('spss')">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e6/SPSS_Icon.png" alt="SPSS">
+            <span>SPSS Statistics</span>
         </div>
-        <div class="menu-item">Graphes</div>
-        <div class="menu-item">Utilitaires</div>
-    </div>
-
-    <div class="toolbar">
-        <div class="tool-icon">📂</div>
-        <div class="tool-icon">💾</div>
-        <div class="tool-icon">🖨️</div>
-        <div class="tool-icon">↩️</div>
-    </div>
-
-    <div class="grid-area" id="grid-container">
-        </div>
-
-    <div class="bottom-tabs">
-        <div class="tab-btn active" id="tab-data" onclick="switchView('data')">Vue de données (بيانات)</div>
-        <div class="tab-btn" id="tab-var" onclick="switchView('var')">Vue des variables (متغيرات)</div>
-    </div>
-</div>
-
-<div class="dialog-overlay" id="freq-dialog">
-    <div class="dialog-box">
-        <div class="title-bar" style="background:#f0f0f0; border-bottom:1px solid #ccc;">
-            <span style="color:black">Fréquences (التكرارات)</span>
-            <span onclick="closeDialog()" style="cursor:pointer">X</span>
-        </div>
-        <div class="dialog-content">
-            <div class="var-list">
-                <div class="var-item">الجنس [Q1.1]</div>
-                <div class="var-item">كم عمرك [Q1.2]</div>
-                <div class="var-item">هل تعمل [Q1.3]</div>
-                <div class="var-item" onclick="selectVar(this)">رضاك عن ظروف العمل [Satisf]</div>
-            </div>
-            <div class="dialog-buttons">
-                <button onclick="moveVar()">➜</button>
-            </div>
-            <div class="target-list" id="target-box"></div>
-            <div style="display:flex; flex-direction:column; gap:5px; margin-right:10px;">
-                <button>Statistiques...</button>
-                <button>Graphiques...</button>
-                <button>Format...</button>
-            </div>
-        </div>
-        <div style="padding:10px; display:flex; justify-content:flex-end; gap:5px;">
-            <button onclick="runAnalysis()">OK</button>
-            <button onclick="closeDialog()">Coller</button>
-            <button onclick="closeDialog()">Annuler</button>
-        </div>
-    </div>
-</div>
-
-<div class="window-frame" id="output-window">
-    <div class="title-bar">
-        <div class="title-text">Output1 [Document1] - IBM SPSS Statistics Viewer</div>
-        <div class="window-controls"><span onclick="closeOutput()" style="background:#e81123; color:white;">X</span></div>
-    </div>
-    <div class="menu-bar">
-        <div class="menu-item">Fichier</div>
-        <div class="menu-item" onclick="printPage()"><b>🖨️ طباعة التقرير (PDF)</b></div>
-    </div>
-    <div class="output-content">
-        <h3 style="text-align:center; border-bottom:1px solid #000;">Frequencies (نتائج التحليل)</h3>
         
-        <p><b>Statistiques</b><br>رضاك عن ظروف العمل</p>
-        <table border="1" style="border-collapse:collapse; width:50%; font-size:12px; margin-bottom:20px;">
-            <tr><td>N Valid</td><td>10</td></tr>
-            <tr><td>Missing</td><td>0</td></tr>
-            <tr><td>Moyenne (Mean)</td><td>2.00</td></tr>
-            <tr><td>Ecart-type</td><td>0.94</td></tr>
-        </table>
+        <div class="icon" onclick="openApp('videos')">
+            <div style="width:48px; height:48px; background:#e52d27; border-radius:10px; display:flex; justify-content:center; align-items:center; font-size:24px;">▶️</div>
+            <span>فيديوهات الشرح</span>
+        </div>
 
-        <p><b>Tableau de fréquences</b></p>
-        <table border="1" style="border-collapse:collapse; width:80%; font-size:12px; margin-bottom:20px;">
-            <tr style="background:#eee;"><th>Valid</th><th>Frequency</th><th>Percent</th><th>Valid Percent</th></tr>
-            <tr><td>غير راض (1)</td><td>4</td><td>40.0</td><td>40.0</td></tr>
-            <tr><td>محايد (2)</td><td>2</td><td>20.0</td><td>20.0</td></tr>
-            <tr><td>راض (3)</td><td>4</td><td>40.0</td><td>40.0</td></tr>
-            <tr><td><b>Total</b></td><td><b>10</b></td><td><b>100.0</b></td><td><b>100.0</b></td></tr>
-        </table>
-
-        <p><b>Diagramme en bâtons</b></p>
-        <div style="width:400px;">
-            <canvas id="outputChart"></canvas>
+        <div class="icon">
+            <div style="font-size:40px;">🗑️</div>
+            <span>Corbeille</span>
         </div>
     </div>
-</div>
 
-<script>
-    // --- البيانات ---
-    [span_2](start_span)// صفحة 15 من الملف[span_2](end_span)
-    const vars = [
-        {name: "Q1.1", type: "Num", label: "الجنس", align:"Right", measure:"Nominal"},
-        {name: "Q1.2", type: "Num", label: "كم عمرك", align:"Right", measure:"Echelle"},
-        {name: "Q1.3", type: "Num", label: "هل تعمل", align:"Right", measure:"Nominal"},
-        {name: "Satisf", type: "Num", label: "رضاك عن ظروف العمل", align:"Right", measure:"Ordinal"}
-    ];
+    <div class="taskbar">
+        <div class="start-btn">🪟 Start</div>
+        <div style="color:white; font-size:0.8rem;">Lamia User | Desktop</div>
+        <div class="clock" id="clock">12:00 PM</div>
+    </div>
 
-    [span_3](start_span)// صفحة 29 من الملف[span_3](end_span)
-    const data = [
-        [1, 24, 1, 3], [2, 22, 2, 1], [1, 25, 1, 3], [2, 23, 2, 2], [1, 30, 1, 1],
-        [1, 28, 1, 3], [2, 21, 2, 3], [2, 26, 2, 1], [1, 24, 1, 2], [1, 29, 1, 1]
-    ];
+    <div class="assistant-container">
+        <div class="assistant-bubble" id="bubble">
+            مرحباً لمياء! 👋<br>أنا مساعدك الشخصي.<br>اضغطي على أيقونة <b>SPSS</b> للبدء في التطبيق العملي.
+        </div>
+        <div class="assistant-avatar" onclick="toggleBubble()">🤖</div>
+    </div>
 
-    let currentStep = 0;
+    <div class="window" id="win-spss" style="width:900px; height:600px;">
+        <div class="win-header">
+            <span>*Untitled1 [DataSet0] - IBM SPSS Statistics Data Editor</span>
+            <div class="win-controls">
+                <span>_</span><span>□</span><span class="close" onclick="closeApp('spss')">X</span>
+            </div>
+        </div>
+        <div class="win-body">
+            <div class="spss-menu">
+                <div class="menu-item">Fichier</div>
+                <div class="menu-item">Edition</div>
+                <div class="menu-item">Affichage</div>
+                <div class="menu-item">Données</div>
+                <div class="menu-item">Transformer</div>
+                <div class="menu-item" onclick="toggleMenu('menu-analyse')">Analyse
+                    <div class="dropdown" id="menu-analyse">
+                        <div class="dd-item">Rapports</div>
+                        <div class="dd-item" onclick="runFrequencies()">Statistiques descriptives ►</div>
+                        <div class="dd-item">Tableaux croisés</div>
+                        <div class="dd-item">Corrélation</div>
+                    </div>
+                </div>
+                <div class="menu-item">Graphes</div>
+            </div>
+            
+            <div class="spss-toolbar">
+                <div class="tool-btn">📂</div>
+                <div class="tool-btn">💾</div>
+                <div class="tool-btn">🖨️</div>
+                <div class="tool-btn">↩️</div>
+                <div style="flex:1"></div>
+                <div class="tool-btn">❓</div>
+            </div>
 
-    // --- الوظائف ---
+            <div id="grid-content" style="flex:1; overflow:auto;">
+                </div>
 
-    function launchApp() {
-        document.getElementById('guide-1').style.display = 'none';
-        document.getElementById('main-window').classList.add('open');
-        showGuide(2, "ممتاز! 🌟<br>نحن الآن في واجهة البيانات.<br>لنذهب أولاً لتعريف الأسئلة. اضغطي على <b>'Vue des variables'</b> في الأسفل.", 600, 500);
-        renderDataGrid();
-    }
+            <div class="tabs">
+                <div class="tab active" id="tab-data" onclick="switchTab('data')">Vue de données (بيانات)</div>
+                <div class="tab" id="tab-var" onclick="switchTab('var')">Vue des variables (متغيرات)</div>
+            </div>
+        </div>
+    </div>
 
-    function switchView(view) {
-        const grid = document.getElementById('grid-container');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    <div class="window" id="win-videos" style="width:600px; height:450px; z-index:10;">
+        <div class="win-header" style="background:#e52d27;">
+            <span>مكتبة الفيديوهات التعليمية</span>
+            <div class="win-controls">
+                <span class="close" onclick="closeApp('videos')">X</span>
+            </div>
+        </div>
+        <div class="win-body" style="padding:10px;">
+            <div style="background:black; height:250px; display:flex; justify-content:center; align-items:center; color:white; margin-bottom:10px;">
+                <span id="video-screen">اختر فيديو للتشغيل</span>
+            </div>
+            <h3>قائمة الدروس:</h3>
+            <ul class="video-list">
+                <li class="video-item" onclick="playVideo('intro')">
+                    <div class="video-thumb"></div>
+                    <div>1. مقدمة حول واجهة SPSS (فيديو 1)</div>
+                </li>
+                <li class="video-item" onclick="playVideo('vars')">
+                    <div class="video-thumb"></div>
+                    <div>2. كيفية تعريف المتغيرات (فيديو 2)</div>
+                </li>
+                <li class="video-item" onclick="playVideo('analysis')">
+                    <div class="video-thumb"></div>
+                    <div>3. التحليل الإحصائي الوصفي (فيديو 3)</div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="window" id="win-output" style="width:700px; height:500px; z-index:600;">
+        <div class="win-header" style="background:white; color:black; border-bottom:1px solid #ccc;">
+            <span>Output1 [Document1] - IBM SPSS Viewer</span>
+            <div class="win-controls">
+                <span class="close" onclick="closeApp('output')">X</span>
+            </div>
+        </div>
+        <div class="win-body" style="padding:20px; font-family:'Times New Roman';">
+            <h3>Frequencies (التكرارات)</h3>
+            <div style="border:1px solid #ccc; padding:10px; margin-bottom:20px;">
+                <strong>الإحصائيات:</strong><br>
+                المتوسط (Mean) = 2.00<br>
+                N = 10
+            </div>
+            
+            <table border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+                <tr style="background:#eee;"><th>القيمة</th><th>Frequency</th><th>Percent</th></tr>
+                <tr><td>غير راض (1)</td><td>4</td><td>40.0%</td></tr>
+                <tr><td>محايد (2)</td><td>2</td><td>20.0%</td></tr>
+                <tr><td>راض (3)</td><td>4</td><td>40.0%</td></tr>
+                <tr><td><b>Total</b></td><td><b>10</b></td><td><b>100%</b></td></tr>
+            </table>
+
+            <br>
+            <div style="width:100%; height:200px;">
+                <canvas id="outChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- المنطق والبيانات ---
+        let currentStep = 0;
         
-        if(view === 'var') {
-            document.getElementById('tab-var').classList.add('active');
-            renderVarGrid();
-            if(currentStep === 0) {
-                currentStep = 1;
-                showGuide(3, "رائع! 👏<br>هنا نعرف المتغيرات (Nom, Type...) كما في الصفحة 8.<br>لقد قمت بملئها لكِ تلقائياً.<br>الآن عودي لتبويب <b>'Vue de données'</b> لنرى البيانات.", 600, 500);
+        // بيانات محاكاة (نفس المثال السابق للمحافظة على السياق)
+        const variables = [
+            {name: "Sexe", type: "Num", label: "الجنس", values: "{1=ذكر...}", measure: "Nominal"},
+            {name: "Age", type: "Num", label: "السن", values: "None", measure: "Scale"},
+            {name: "Satisf", type: "Num", label: "الرضا الوظيفي", values: "{1=غير راض...}", measure: "Ordinal"}
+        ];
+        
+        const dataRows = [
+            [1, 24, 3], [2, 22, 1], [1, 25, 3], [2, 23, 2], [1, 30, 1],
+            [1, 28, 3], [2, 21, 3], [2, 26, 1], [1, 24, 2], [1, 29, 1]
+        ];
+
+        // --- التحكم بالنوافذ ---
+        function openApp(appName) {
+            document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
+            
+            if (appName === 'spss') {
+                document.getElementById('win-spss').style.display = 'flex';
+                speak("أحسنتِ! لقد فتحتِ البرنامج. لنذهب أولاً إلى تبويب المتغيرات بالأسفل.");
+                renderGrid('data'); // Default
+            } else if (appName === 'videos') {
+                document.getElementById('win-videos').style.display = 'flex';
+                speak("هذه مكتبة الفيديوهات. يمكنك مراجعة الدروس هنا.");
             }
-        } else {
-            document.getElementById('tab-data').classList.add('active');
-            renderDataGrid();
-            if(currentStep === 1) {
-                currentStep = 2;
-                showGuide(4, "الآن سنقوم بالتحليل!<br>اضغطي على قائمة <b>'Analyse'</b> في الأعلى.<br>تم <b>'Statistiques descriptives'</b>.", 300, 100);
+        }
+
+        function closeApp(appName) {
+            document.getElementById('win-' + appName).style.display = 'none';
+        }
+
+        function toggleBubble() {
+            const b = document.getElementById('bubble');
+            b.style.display = b.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function speak(text) {
+            const b = document.getElementById('bubble');
+            b.innerHTML = text;
+            b.style.display = 'block';
+            // في النسخة المتطورة يمكن إضافة speech synthesis هنا
+        }
+
+        // --- وظائف SPSS ---
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if(tab === 'var') {
+                document.getElementById('tab-var').classList.add('active');
+                renderGrid('var');
+                speak("ممتاز. هذه نافذة المتغيرات (Variable View). هنا نعرف الأسئلة.");
+            } else {
+                document.getElementById('tab-data').classList.add('active');
+                renderGrid('data');
+                speak("هذه نافذة البيانات. الآن حاولي الضغط على قائمة Analyse في الأعلى.");
             }
         }
-    }
 
-    function renderVarGrid() {
-        let html = '<table class="spss-grid"><thead><tr><th></th><th>Nom</th><th>Type</th><th>Largeur</th><th>Décimales</th><th>Libellé</th><th>Valeurs</th><th>Mesure</th></tr></thead><tbody>';
-        vars.forEach((v,i) => {
-            html += `<tr><td style="background:#eee">${i+1}</td><td>${v.name}</td><td>${v.type}</td><td>8</td><td>0</td><td>${v.label}</td><td>...</td><td>${v.measure}</td></tr>`;
-        });
-        html += '</tbody></table>';
-        document.getElementById('grid-container').innerHTML = html;
-    }
-
-    function renderDataGrid() {
-        let html = '<table class="spss-grid"><thead><tr><th></th>';
-        vars.forEach(v => html += `<th>${v.name}</th>`);
-        html += '</tr></thead><tbody>';
-        data.forEach((row,i) => {
-            html += `<tr><td style="background:#eee">${i+1}</td>`;
-            row.forEach(val => html += `<td>${val}</td>`);
-            html += '</tr>';
-        });
-        html += '</tbody></table>';
-        document.getElementById('grid-container').innerHTML = html;
-    }
-
-    function toggleAnalyse() {
-        const menu = document.getElementById('dropdown-analyse');
-        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-    }
-
-    function openFreqDialog() {
-        document.getElementById('dropdown-analyse').style.display = 'none';
-        document.getElementById('freq-dialog').style.display = 'flex';
-        showGuide(5, "هذه نافذة التكرارات (صفحة 25).<br>1. اختاري 'رضاك عن ظروف العمل'.<br>2. اضغطي السهم لنقله.<br>3. اضغطي OK.", 50, 50, 'relative');
-        // remove bubble from body and append to dialog for correct positioning
-        const bubble = document.getElementById('guide-bubble');
-        if(bubble) {
-            bubble.style.position = 'absolute';
-            bubble.style.top = '-80px';
-            bubble.style.right = '0';
-            document.querySelector('.dialog-box').appendChild(bubble);
+        function renderGrid(type) {
+            const container = document.getElementById('grid-content');
+            let html = '<table class="grid"><thead><tr>';
+            
+            if(type === 'var') {
+                html += '<th>#</th><th>Nom</th><th>Type</th><th>Libellé</th><th>Valeurs</th><th>Mesure</th></tr></thead><tbody>';
+                variables.forEach((v, i) => {
+                    html += `<tr><td style="background:#eee">${i+1}</td><td>${v.name}</td><td>${v.type}</td><td>${v.label}</td><td>${v.values}</td><td>${v.measure}</td></tr>`;
+                });
+            } else {
+                html += '<th>#</th><th>Sexe</th><th>Age</th><th>Satisf</th></tr></thead><tbody>';
+                dataRows.forEach((r, i) => {
+                    html += `<tr><td style="background:#eee">${i+1}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`;
+                });
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
         }
-    }
 
-    function selectVar(el) {
-        document.querySelectorAll('.var-item').forEach(d => d.style.background = 'transparent');
-        document.querySelectorAll('.var-item').forEach(d => d.style.color = 'black');
-        el.style.background = '#2c5aa0';
-        el.style.color = 'white';
-        el.classList.add('selected');
-    }
-
-    function moveVar() {
-        const selected = document.querySelector('.var-item.selected');
-        if(selected) {
-            document.getElementById('target-box').innerHTML = `<div class="var-item">${selected.innerText}</div>`;
-            selected.style.display = 'none';
+        function toggleMenu(id) {
+            const menu = document.getElementById(id);
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
         }
-    }
 
-    function runAnalysis() {
-        document.getElementById('freq-dialog').style.display = 'none';
-        const win = document.getElementById('output-window');
-        win.classList.add('open');
-        win.style.zIndex = 1000;
-        
-        // رسم الشارت
-        setTimeout(() => {
-            const ctx = document.getElementById('outputChart').getContext('2d');
+        function runFrequencies() {
+            document.getElementById('menu-analyse').style.display = 'none';
+            speak("جاري تنفيذ التحليل... لحظة واحدة ⏳");
+            
+            setTimeout(() => {
+                document.getElementById('win-output').style.display = 'flex';
+                renderChart();
+                speak("رائع! 🎉 هذه هي النتائج. انظري للجدول والرسم البياني.");
+            }, 1000);
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('outChart').getContext('2d');
             new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ['غير راض', 'محايد', 'راض'],
                     datasets: [{
-                        label: 'Frequency',
+                        label: 'عدد الموظفين',
                         data: [4, 2, 4],
-                        backgroundColor: '#bfcdac',
-                        borderColor: '#333',
-                        borderWidth: 1
+                        backgroundColor: ['#ff6384', '#36a2eb', '#4bc0c0']
                     }]
                 },
-                options: { animation: false }
+                options: { responsive: true, maintainAspectRatio: false }
             });
-        }, 100);
-
-        const bubble = document.getElementById('guide-bubble');
-        if(bubble) bubble.style.display = 'none';
-        
-        alert("مبروك لمياء! 🎉\nلقد أتممت التحليل بنجاح.\nيمكنك الآن طباعة التقرير من قائمة Fichier.");
-    }
-
-    function closeOutput() { document.getElementById('output-window').classList.remove('open'); }
-    function closeDialog() { document.getElementById('freq-dialog').style.display = 'none'; }
-    function closeApp() { location.reload(); }
-    
-    function showGuide(step, text, top, left, pos='absolute') {
-        let b = document.getElementById('guide-bubble');
-        if(!b) {
-            b = document.createElement('div');
-            b.id = 'guide-bubble';
-            b.className = 'guide-bubble';
-            document.body.appendChild(b);
         }
-        b.innerHTML = text;
-        b.style.position = pos;
-        if(pos === 'absolute') {
-            b.style.top = top + 'px';
-            b.style.left = left + 'px'; // Actually right in RTL usually, but strict px here
+
+        // --- وظائف الفيديو ---
+        function playVideo(vid) {
+            const screen = document.getElementById('video-screen');
+            screen.innerHTML = "▶️ جاري تشغيل الفيديو التعليمي...<br>(محاكاة)";
+            screen.style.background = "#222";
         }
-        b.style.display = 'block';
-    }
 
-    function printPage() { window.print(); }
+        // --- الساعة ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+        }, 1000);
 
-</script>
+        // تشغيل البداية
+        setTimeout(() => toggleBubble(), 1000);
+    </script>
 </body>
 </html>
