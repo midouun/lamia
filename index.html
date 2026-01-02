@@ -3,331 +3,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق محاكاة SPSS - لمياء</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <title>نظام محاكاة SPSS - لمياء</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         :root {
-            --spss-blue: #2c5aa0;
-            --spss-light: #e3f2fd;
-            --text-color: #333;
+            --primary: #2c5aa0; /* IBM Blue */
+            --bg-color: #f4f4f9;
+            --border-color: #ccc;
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-color);
             margin: 0;
             padding: 20px;
-            direction: rtl;
+            color: #333;
         }
-        .container {
-            max-width: 900px;
+
+        /* --- تصميم الواجهة (يختفي عند الطباعة) --- */
+        .app-container {
+            max-width: 950px;
             margin: 0 auto;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
             overflow: hidden;
-        }
-        
-        /* الهيدر */
-        header {
-            background: var(--spss-blue);
-            color: white;
-            padding: 15px;
-            text-align: center;
-            border-bottom: 4px solid #fdbb2d;
-        }
-        header h2 { margin: 0; font-size: 1.4rem; }
-        header p { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.9; }
-
-        /* منطقة الخطوات */
-        .wizard-steps {
             display: flex;
-            background: #fff;
-            border-bottom: 1px solid #ddd;
+            flex-direction: column;
+            min-height: 80vh;
         }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stepper {
+            display: flex;
+            border-bottom: 1px solid #eee;
+            background: #fff;
+        }
+
         .step {
             flex: 1;
             padding: 15px;
             text-align: center;
             font-size: 0.9rem;
-            color: #aaa;
+            color: #999;
+            border-left: 1px solid #f0f0f0;
+            transition: 0.3s;
             cursor: default;
-            position: relative;
         }
         .step.active {
-            color: var(--spss-blue);
+            background: #ecf6ff;
+            color: var(--primary);
             font-weight: bold;
-            background: var(--spss-light);
-        }
-        .step.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--spss-blue);
+            border-bottom: 3px solid var(--primary);
         }
 
-        /* المحتوى */
-        .content {
+        .content-area {
+            flex: 1;
             padding: 30px;
-            min-height: 400px;
+            position: relative;
         }
-        .step-panel { display: none; animation: fadeIn 0.4s; }
-        .step-panel.active { display: block; }
-        @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
 
-        /* الجداول */
-        table.data-table {
+        .panel { display: none; animation: fadeIn 0.5s; }
+        .panel.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* جداول المحاكاة */
+        table.sim-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9rem;
-            margin-top: 10px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
         }
-        table.data-table th, table.data-table td {
-            border: 1px solid #ccc;
-            padding: 8px;
+        table.sim-table th, table.sim-table td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
             text-align: center;
         }
-        table.data-table th { background: #f9f9f9; color: var(--spss-blue); }
+        table.sim-table th { background-color: #f8f9fa; color: var(--primary); }
 
         /* الأزرار */
-        .btn-group {
+        .controls {
             padding: 20px;
-            background: #f9f9f9;
+            background: #fafafa;
             border-top: 1px solid #eee;
             display: flex;
             justify-content: space-between;
         }
-        button {
-            padding: 10px 25px;
+        .btn {
+            padding: 10px 30px;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: inherit;
+            border-radius: 5px;
+            font-family: 'Cairo', sans-serif;
             font-weight: bold;
+            cursor: pointer;
             transition: 0.2s;
         }
-        .btn-next { background: var(--spss-blue); color: white; }
-        .btn-next:hover { opacity: 0.9; }
-        .btn-back { background: #e0e0e0; color: #555; }
+        .btn-next { background: var(--primary); color: white; }
+        .btn-next:hover { background: #1a3c70; }
+        .btn-prev { background: #e0e0e0; color: #555; }
         .btn-print { background: #d32f2f; color: white; display: none; }
+        .btn-print:hover { background: #b71c1c; }
 
-        /* محاكاة القائمة */
-        .menu-simulation {
-            background: #eee;
-            border: 1px solid #999;
-            padding: 5px;
-            margin-bottom: 15px;
-            display: flex;
-            gap: 15px;
-            font-size: 0.85rem;
-        }
-        .menu-item { cursor: pointer; position: relative; }
-        .menu-item:hover { color: blue; text-decoration: underline; }
-        
-        .dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            border: 1px solid #999;
-            width: 200px;
-            display: none;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            z-index: 10;
-        }
-        .dropdown div { padding: 8px; border-bottom: 1px solid #eee; }
-        .dropdown div:hover { background: var(--spss-blue); color: white; }
-
-        /* منطقة التقرير النهائي */
+        /* --- تصميم التقرير (يظهر فقط في الخطوة الأخيرة والطباعة) --- */
         #final-report {
-            border: 1px solid #ccc;
-            padding: 40px;
+            border: 1px solid #ddd;
+            padding: 40px; /* هامش للورقة */
             background: white;
+            width: 100%;
+            box-sizing: border-box;
+            display: none; /* مخفي افتراضياً */
         }
-        .chart-container {
-            width: 60%;
-            margin: 20px auto;
+        
+        /* تنسيقات التقرير الداخلية */
+        .report-header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .report-logo { font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
+        .report-meta { font-size: 0.9rem; color: #555; }
+        
+        .report-section { margin-bottom: 30px; }
+        .report-section h3 { 
+            font-size: 1.1rem; 
+            background: #eee; 
+            padding: 5px 10px; 
+            border-right: 4px solid var(--primary); 
+        }
+
+        /* --- إعدادات الطباعة (السر في إصلاح المشاكل) --- */
+        @media print {
+            body { background: white; padding: 0; }
+            .app-container, .controls, .stepper, header { display: none !important; }
+            #final-report { 
+                display: block !important; 
+                border: none; 
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                margin: 0;
+                padding: 20px;
+            }
+            .panel { display: none !important; }
+            /* إجبار المتصفح على طباعة الألوان */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="app-container">
     <header>
-        <h2>جامعة امحمد بوقرة - بومرداس</h2>
-        <p>محاكاة عملية لمقياس تقنيات الاستقصاء (SPSS) - إعداد خاص للمياء</p>
+        <div style="font-weight:bold;">IBM SPSS Statistics</div>
+        <div style="font-size:0.9rem;">محاكاة تعليمية - المحور الثالث</div>
     </header>
 
-    <div class="wizard-steps">
-        <div class="step active" id="s1">1. إدخال المتغيرات</div>
-        <div class="step" id="s2">2. البيانات</div>
-        <div class="step" id="s3">3. القوائم والتحليل</div>
-        <div class="step" id="s4">4. التقرير والرسوم</div>
+    <div class="stepper">
+        <div class="step active" id="step-btn-1">1. تعريف المتغيرات</div>
+        <div class="step" id="step-btn-2">2. تفريغ البيانات</div>
+        <div class="step" id="step-btn-3">3. إجراء التحليل</div>
+        <div class="step" id="step-btn-4">4. التقرير النهائي</div>
     </div>
 
-    <div class="content">
+    <div class="content-area">
         
-        <div class="step-panel active" id="panel-1">
-            <h3>الخطوة 1: نافذة المتغيرات (Vue des variables)</h3>
-            [span_2](start_span)<p>كما في الصفحة 8 من الدرس[span_2](end_span)، نقوم بتعريف خصائص الأسئلة:</p>
-            <table class="data-table">
+        <div class="panel active" id="panel-1">
+            <h2 style="color:var(--primary)">1. نافذة المتغيرات (Variable View)</h2>
+            <p>نقوم بتعريف خصائص الاستبيان. لاحظي كيف قمنا بترميز "الجنس" و"الرضا":</p>
+            <table class="sim-table">
                 <thead>
-                    <tr><th>Nom (الاسم)</th><th>Type</th><th>Libellé (الوصف)</th><th>Valeurs (القيم)</th><th>Mesure</th></tr>
+                    <tr><th>#</th><th>Nom (الاسم)</th><th>Type</th><th>Libellé (الوصف)</th><th>Values (القيم)</th><th>Mesure</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td>Sexe</td><td>Numérique</td><td>جنس الموظف</td><td>{1=ذكر, 2=أنثى}</td><td>Nominal</td></tr>
-                    <tr><td>Satisfaction</td><td>Numérique</td><td>رضاك عن ظروف العمل</td><td>{1=غير راض... 5=راض}</td><td>Ordinal</td></tr>
+                    <tr><td>1</td><td style="color:blue">Sexe</td><td>Numérique</td><td>الجنس</td><td>{1=ذكر, 2=أنثى}</td><td>Nominal 🎈</td></tr>
+                    <tr><td>2</td><td style="color:blue">Satisf</td><td>Numérique</td><td>الرضا الوظيفي</td><td>{1=غير راض... 3=راض}</td><td>Ordinal 📊</td></tr>
                 </tbody>
             </table>
-            <div style="margin-top:15px; background:#fff3cd; padding:10px; border-radius:4px; font-size:0.9rem;">
-                [span_3](start_span)💡 <b>تذكير:</b> في خانة Values (القيم)[span_3](end_span)، نقوم بترميز الإجابات اللفظية إلى أرقام (مثلاً 1 للذكر) ليسهل حسابها.
+        </div>
+
+        <div class="panel" id="panel-2">
+            <h2 style="color:var(--primary)">2. نافذة البيانات (Data View)</h2>
+            <p>تم تفريغ 10 استمارات كمثال (كما في الدرس صفحة 29):</p>
+            <table class="sim-table">
+                <thead><tr><th>#</th><th>Sexe</th><th>Satisf</th></tr></thead>
+                <tbody>
+                    <tr><td>1</td><td>1 (ذكر)</td><td>3 (راض)</td></tr>
+                    <tr><td>2</td><td>2 (أنثى)</td><td>1 (غير راض)</td></tr>
+                    <tr><td>3</td><td>1 (ذكر)</td><td>3 (راض)</td></tr>
+                    <tr><td>4</td><td>2 (أنثى)</td><td>2 (محايد)</td></tr>
+                    <tr><td>5</td><td>1 (ذكر)</td><td>1 (غير راض)</td></tr>
+                    <tr><td colspan="3" style="color:#888;">... بقية البيانات (10 أشخاص) ...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel" id="panel-3">
+            <h2 style="color:var(--primary)">3. تنفيذ التحليل (Analyse)</h2>
+            <div style="text-align:center; padding: 40px;">
+                <p style="font-size:1.2rem;">اضغطي على الزر لمحاكاة الأمر:</p>
+                <code style="background:#333; color:#0f0; padding:10px; display:block; margin:20px auto; width:fit-content; direction:ltr;">
+                    Analyse > Statistiques descriptives > Fréquences
+                </code>
+                <button onclick="simulateProcessing()" class="btn" style="background:#fdbb2d; color:#000; margin-top:20px;">
+                    ⚙️ بدء المعالجة
+                </button>
+                <div id="loader" style="display:none; margin-top:20px; font-weight:bold; color:green;">
+                    جاري الحساب وإنشاء الرسوم البيانية...
+                </div>
             </div>
         </div>
 
-        <div class="step-panel" id="panel-2">
-            <h3>الخطوة 2: نافذة البيانات (Vue de données)</h3>
-            [span_4](start_span)<p>هنا نقوم بتفريغ الاستمارات[span_4](end_span). كل سطر يمثل شخصاً واحداً.</p>
-            <table class="data-table">
-                <thead><tr><th>#</th><th>Sexe</th><th>Satisfaction</th></tr></thead>
-                <tbody>
-                    <tr><td>1</td><td>1</td><td>4</td></tr>
-                    <tr><td>2</td><td>2</td><td>5</td></tr>
-                    <tr><td>3</td><td>1</td><td>2</td></tr>
-                    <tr><td>4</td><td>2</td><td>4</td></tr>
-                    <tr><td>5</td><td>1</td><td>1</td></tr>
-                </tbody>
-            </table>
-            [span_5](start_span)<p><i>(تم ملء 10 حالات تلقائياً للمحاكاة كما في المثال صفحة 29[span_5](end_span))</i></p>
-        </div>
-
-        <div class="step-panel" id="panel-3">
-            <h3>الخطوة 3: تنفيذ الأمر (Analyse)</h3>
-            [span_6](start_span)<p>يا لمياء، جربي الضغط على القائمة كما هو مشروح في الدرس[span_6](end_span):</p>
+        <div class="panel" id="panel-4">
+            <h2 style="color:var(--primary); text-align:center;">تم إنشاء التقرير بنجاح! ✅</h2>
+            <p style="text-align:center;">يمكنك مراجعة التقرير أدناه، ثم الضغط على "طباعة / حفظ PDF".</p>
             
-            <div class="menu-simulation">
-                <div class="menu-item">Fichier</div>
-                <div class="menu-item">Edition</div>
-                <div class="menu-item">Affichage</div>
-                <div class="menu-item" onclick="toggleMenu()">
-                    <b>Analyse (اضغطي هنا) ▼</b>
-                    <div class="dropdown" id="analysis-menu">
-                        <div>Rapports</div>
-                        <div onclick="runAnalysis()">Statistiques descriptives ►</div>
-                        <div>Comparer les moyennes</div>
-                        <div>Corrélation</div>
+            <div id="final-report" style="display:block; border:1px solid #ccc; box-shadow:0 0 15px rgba(0,0,0,0.1);">
+                <div class="report-header">
+                    <div class="report-logo">جامعة امحمد بوقرة - بومرداس</div>
+                    <div class="report-meta">كلية العلوم الاقتصادية والتجارية وعلوم التسيير</div>
+                    <div class="report-meta">مقياس: تقنيات الاستقصاء (SPSS) | الطالبة: لمياء</div>
+                </div>
+
+                <div class="report-section">
+                    <h3>1. Statistiques Descriptives (الإحصاء الوصفي)</h3>
+                    <table class="sim-table" style="border:2px solid #000; width:100%;">
+                        <tr style="background:#eee;">
+                            <th>المتغير</th>
+                            <th>N (العدد)</th>
+                            <th>Moyenne (المتوسط)</th>
+                            <th>Ecart-type (الانحراف)</th>
+                        </tr>
+                        <tr>
+                            <td>الرضا الوظيفي</td>
+                            <td>10</td>
+                            <td>2.00</td>
+                            <td>0.94</td>
+                        </tr>
+                    </table>
+                    <p style="font-size:0.9rem;">* تعليق: المتوسط الحسابي هو 2.00 مما يدل على رضا متوسط.</p>
+                </div>
+
+                <div class="report-section">
+                    <h3>2. Tableau de Fréquence (جدول التكرارات)</h3>
+                    <table class="sim-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th>الاستجابة</th>
+                                <th>Effectifs (التكرار)</th>
+                                <th>Pourcentage %</th>
+                                <th>Cumul %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>غير راض (1)</td><td>4</td><td>40.0%</td><td>40.0%</td></tr>
+                            <tr><td>محايد (2)</td><td>2</td><td>20.0%</td><td>60.0%</td></tr>
+                            <tr><td>راض (3)</td><td>4</td><td>40.0%</td><td>100.0%</td></tr>
+                            <tr style="font-weight:bold; background:#eee;"><td>المجموع Total</td><td>10</td><td>100.0%</td><td></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="report-section">
+                    <h3>3. Diagramme en bâtons (التمثيل البياني)</h3>
+                    <div style="width: 70%; margin: 0 auto;">
+                        <canvas id="spssChart"></canvas>
                     </div>
                 </div>
-                <div class="menu-item">Graphes</div>
-            </div>
 
-            <div id="loading-msg" style="display:none; color:green; font-weight:bold; text-align:center; margin-top:30px;">
-                جاري حساب التكرارات ورسم الأعمدة البيانية... <br>
-                <span style="font-size:2rem;">⏳</span>
-            </div>
-        </div>
-
-        <div class="step-panel" id="panel-4">
-            <div id="final-report">
-                <div style="border-bottom:2px solid #000; margin-bottom:20px; padding-bottom:10px; text-align:center;">
-                    <h3>تقرير النتائج الإحصائية (Output Viewer)</h3>
-                    <small>المقياس: تقنيات الاستقصاء - معالجة SPSS</small>
+                <div style="margin-top:40px; border-top:1px solid #000; padding-top:10px; display:flex; justify-content:space-between; font-size:0.8rem;">
+                    <span>Output Generated by IBM SPSS Statistics</span>
+                    <span>Page 1 of 1</span>
                 </div>
-
-                [span_7](start_span)<h4>1. Statistiques (الإحصائيات الوصفية)[span_7](end_span)</h4>
-                <table class="data-table" style="width:100%; border:2px solid #000;">
-                    <tr style="background:#eee;"><th>المتغير</th><th>Moyenne (المتوسط)</th><th>Ecart-type (الانحراف)</th><th>N</th></tr>
-                    <tr><td>رضاك عن العمل</td><td>2.00</td><td>0.94</td><td>10</td></tr>
-                </table>
-
-                <h4>2. [span_8](start_span)Tableau de Fréquences (الرضا الوظيفي)[span_8](end_span)</h4>
-                <table class="data-table" style="width:100%;">
-                    <tr><th>الاستجابة</th><th>Effectifs (التكرار)</th><th>Pourcentage %</th></tr>
-                    <tr><td>غير راض (1)</td><td>4</td><td>40.0%</td></tr>
-                    <tr><td>محايد (2)</td><td>2</td><td>20.0%</td></tr>
-                    <tr><td>راض (3)</td><td>4</td><td>40.0%</td></tr>
-                    <tr style="font-weight:bold;"><td>Total</td><td>10</td><td>100.0%</td></tr>
-                </table>
-
-                <h4>3. [span_9](start_span)Diagramme en bâtons (الأعمدة البيانية)[span_9](end_span)</h4>
-                <div class="chart-container">
-                    <canvas id="myChart"></canvas>
-                </div>
-                
-                <p style="font-size:0.8rem; margin-top:20px;">* تم توليد هذا التقرير آلياً بناءً على خطوات الدرس.</p>
             </div>
+
         </div>
 
     </div>
 
-    <div class="btn-group">
-        <button class="btn-back" onclick="move(-1)" id="prevBtn" disabled>السابق</button>
-        <button class="btn-next" onclick="move(1)" id="nextBtn">التالي</button>
-        <button class="btn-print" onclick="downloadPDF()" id="printBtn">📥 تحميل التقرير PDF</button>
+    <div class="controls">
+        <button class="btn btn-prev" id="prevBtn" onclick="move(-1)" disabled>السابق</button>
+        <button class="btn btn-next" id="nextBtn" onclick="move(1)">التالي</button>
+        <button class="btn btn-print" id="printBtn" onclick="printReport()">🖨️ طباعة / حفظ PDF</button>
     </div>
 </div>
 
 <script>
-    let step = 1;
-    let chartInstance = null;
+    let currentStep = 1;
+    let chartRendered = false;
 
     function move(dir) {
-        document.getElementById(`s${step}`).classList.remove('active');
-        document.getElementById(`panel-${step}`).classList.remove('active');
+        // إخفاء الحالي
+        document.getElementById(`panel-${currentStep}`).classList.remove('active');
+        document.getElementById(`step-btn-${currentStep}`).classList.remove('active');
         
-        step += dir;
+        currentStep += dir;
         
-        document.getElementById(`s${step}`).classList.add('active');
-        document.getElementById(`panel-${step}`).classList.add('active');
+        // إظهار الجديد
+        document.getElementById(`panel-${currentStep}`).classList.add('active');
+        document.getElementById(`step-btn-${currentStep}`).classList.add('active');
 
-        // أزرار التحكم
-        document.getElementById('prevBtn').disabled = (step === 1);
+        // تحديث الأزرار
+        document.getElementById('prevBtn').disabled = (currentStep === 1);
         
-        if (step === 4) {
+        if (currentStep === 4) {
             document.getElementById('nextBtn').style.display = 'none';
             document.getElementById('printBtn').style.display = 'block';
-            renderChart(); // رسم المخطط عند الوصول للخطوة الأخيرة
+            if (!chartRendered) renderChart();
         } else {
             document.getElementById('nextBtn').style.display = 'block';
             document.getElementById('printBtn').style.display = 'none';
         }
     }
 
-    // منطق القائمة المنسدلة
-    function toggleMenu() {
-        const menu = document.getElementById('analysis-menu');
-        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function runAnalysis() {
-        document.getElementById('analysis-menu').style.display = 'none';
-        document.getElementById('loading-msg').style.display = 'block';
+    function simulateProcessing() {
+        document.getElementById('loader').style.display = 'block';
         setTimeout(() => {
-            move(1); // الانتقال للنتائج بعد ثانية
-        }, 1000);
+            move(1); // انتقال تلقائي بعد ثانية ونصف
+        }, 1500);
     }
 
-    // رسم المخطط باستخدام Chart.js
     function renderChart() {
-        const ctx = document.getElementById('myChart').getContext('2d');
-        
-        // تدمير المخطط السابق إذا وجد لمنع التداخل
-        if (chartInstance) chartInstance.destroy();
-
-        chartInstance = new Chart(ctx, {
-            type: 'bar', // نوع المخطط: أعمدة كما في ص 28
+        const ctx = document.getElementById('spssChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
             data: {
-                labels: ['غير راض', 'محايد', 'راض'], // التسميات
+                labels: ['غير راض (1)', 'محايد (2)', 'راض (3)'],
                 datasets: [{
                     label: 'عدد الموظفين (Effectifs)',
-                    data: [4, 2, 4], // البيانات من المثال ص 29
+                    data: [4, 2, 4],
                     backgroundColor: [
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(75, 192, 192, 0.6)'
+                        'rgba(255, 99, 132, 0.6)', // أحمر
+                        'rgba(54, 162, 235, 0.6)', // أزرق
+                        'rgba(75, 192, 192, 0.6)'  // أخضر
                     ],
                     borderColor: [
                         'rgba(255, 99, 132, 1)',
@@ -338,36 +360,25 @@
                 }]
             },
             options: {
-                animation: false, // إلغاء الحركة لضمان ظهورها في الـ PDF
+                animation: false, // مهم جداً للطباعة لتظهر الأعمدة فوراً
                 responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: 'توزيع الرضا عن ظروف العمل'
-                    }
-                },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'التكرار' }
+                        ticks: { stepSize: 1 }
                     }
+                },
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: 'توزيع الرضا عن ظروف العمل' }
                 }
             }
         });
+        chartRendered = true;
     }
 
-    // تحميل ملف PDF
-    function downloadPDF() {
-        const element = document.getElementById('final-report');
-        const opt = {
-            margin: 10,
-            filename: 'تقرير_SPSS_لمياء.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(element).save();
+    function printReport() {
+        window.print();
     }
 </script>
 
