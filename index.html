@@ -3,386 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكاة تعليمية لبرنامج SPSS - جامعة بومرداس</title>
+    <title>معالج SPSS الاحترافي - للمياء</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
-            --spss-blue: #2c5aa0;
-            --spss-grey: #f0f0f0;
-            --border-color: #ccc;
+            --primary: #2c5aa0; /* لون SPSS الأزرق */
+            --secondary: #e0e0e0;
+            --accent: #ff9800;
+            --text: #333;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
             margin: 0;
-            background-color: #e9e9e9;
-            height: 100vh;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
 
-        /* Header Style imitating SPSS Window */
+        /* حاوية التطبيق */
+        .app-container {
+            width: 90%;
+            max-width: 1000px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        /* شريط العنوان */
         header {
-            background-color: var(--spss-blue);
+            background: var(--primary);
             color: white;
-            padding: 10px;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .menu-bar {
-            background-color: #f5f5f5;
-            padding: 5px 10px;
-            border-bottom: 1px solid #999;
-            display: flex;
-            gap: 15px;
-            font-size: 14px;
-        }
-        .menu-item { cursor: pointer; }
-        .menu-item:hover { text-decoration: underline; color: var(--spss-blue); }
+        header h1 { margin: 0; font-size: 1.2rem; }
+        header .badge { background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
 
-        /* Main Layout */
-        .container {
+        /* شريط التقدم */
+        .progress-bar {
             display: flex;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+        .step-indicator {
             flex: 1;
-            overflow: hidden;
+            padding: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #aaa;
+            border-left: 1px solid #eee;
+            position: relative;
+            transition: 0.3s;
         }
-
-        /* Sidebar for PDF Lessons */
-        .sidebar {
-            width: 250px;
-            background: white;
-            border-left: 1px solid var(--border-color);
-            padding: 10px;
-            overflow-y: auto;
-        }
-        .sidebar h3 { font-size: 16px; color: var(--spss-blue); border-bottom: 2px solid var(--spss-blue); padding-bottom: 5px; }
-        .lesson-btn {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            text-align: right;
-            border: none;
-            background: none;
-            cursor: pointer;
-            border-bottom: 1px solid #eee;
-            transition: 0.2s;
-        }
-        .lesson-btn:hover, .lesson-btn.active { background-color: #e3f2fd; font-weight: bold; }
-
-        /* Main Workspace (Simulator) */
-        .workspace {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: white;
-            margin: 10px;
-            border: 1px solid #999;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        }
-
-        /* Tab Switcher (Data View vs Variable View) */
-        .tabs {
-            display: flex;
-            background: #d4d4d4;
-            border-bottom: 1px solid #999;
-        }
-        .tab {
-            padding: 8px 20px;
-            cursor: pointer;
-            border-right: 1px solid #999;
-            background: #e0e0e0;
-        }
-        .tab.active {
-            background: white;
+        .step-indicator.active {
+            color: var(--primary);
             font-weight: bold;
-            border-bottom: 1px solid white;
-            margin-bottom: -1px;
+            background: #f0f7ff;
+            border-bottom: 3px solid var(--primary);
+        }
+        .step-indicator.completed {
+            color: green;
         }
 
-        /* Grid Simulation */
-        .grid-container {
+        /* منطقة المحتوى */
+        .content-area {
             flex: 1;
-            overflow: auto;
+            padding: 20px;
+            overflow-y: auto;
             position: relative;
         }
-        table {
+
+        /* إخفاء وإظهار الخطوات */
+        .step-content { display: none; animation: fadeIn 0.5s; }
+        .step-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* جداول SPSS */
+        table.spss-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 4px 8px;
-            text-align: center;
-            min-width: 60px;
-        }
-        th { background-color: #f0f0f0; font-weight: normal; }
-        
-        /* Output Window Overlay */
-        #output-window {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 600px;
-            height: 400px;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
             background: white;
-            border: 1px solid #000;
-            box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
-            display: none;
-            flex-direction: column;
-            z-index: 1000;
         }
-        .window-header {
-            background: var(--spss-blue);
-            color: white;
-            padding: 5px;
+        table.spss-table th, table.spss-table td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+            text-align: center;
+        }
+        table.spss-table th { background: #f0f0f0; font-weight: normal; border-bottom: 2px solid #999; }
+        
+        /* تذييل التحكم */
+        footer {
+            background: #f9f9f9;
+            padding: 15px 20px;
+            border-top: 1px solid #ddd;
             display: flex;
             justify-content: space-between;
         }
-        .window-content {
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        .btn-next { background: var(--primary); color: white; }
+        .btn-next:hover { background: #1d437b; }
+        .btn-prev { background: #ddd; color: #333; }
+        .btn-prev:hover { background: #ccc; }
+        .btn-pdf { background: #d32f2f; color: white; display: none; } /* يظهر فقط في النهاية */
+
+        /* محاكاة النوافذ */
+        .window-simulation {
+            border: 1px solid #999;
+            background: white;
+            padding: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            height: 100%;
+            overflow: auto;
+        }
+
+        /* تقرير المخرجات */
+        #final-report {
+            border: 1px solid #000;
+            padding: 40px;
+            background: white;
             font-family: 'Times New Roman', serif;
         }
-        .close-btn { cursor: pointer; font-weight: bold; }
-
-        /* Educational Content Overlay */
-        .info-box {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            padding: 10px;
-            margin: 10px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
+        .report-header { text-align: center; border-bottom: 2px solid black; margin-bottom: 20px; padding-bottom: 10px; }
+        .sp-log { font-family: monospace; background: #eee; padding: 10px; margin-bottom: 15px; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<header>
-    <div style="font-weight: bold;">IBM SPSS Statistics - محاكاة تعليمية (المحور الثالث)</div>
-    <div>جامعة امحمد بوقرة_بومرداس</div>
-</header>
+<div class="app-container">
+    <header>
+        <h1>IBM SPSS Statistics - المحاكاة التعليمية</h1>
+        <span class="badge">الإصدار الخاص بلمياء</span>
+    </header>
 
-<div class="menu-bar">
-    <div class="menu-item" onclick="showInfo('File')">File (ملف)</div>
-    <div class="menu-item" onclick="showInfo('Edit')">Edit (تحرير)</div>
-    <div class="menu-item" onclick="showInfo('View')">View (عرض)</div>
-    <div class="menu-item" onclick="showInfo('Data')">Data (بيانات)</div>
-    <div class="menu-item" onclick="showInfo('Transform')">Transform (تحويل)</div>
-    <div class="menu-item" onclick="analyze('descriptive')">Analyze (تحليل)</div>
-    <div class="menu-item">Graphs (رسومات)</div>
-    <div class="menu-item">Utilities</div>
-    <div class="menu-item">Help</div>
-</div>
-
-<div class="container">
-    <div class="sidebar">
-        <h3>فهرس الدروس</h3>
-        <button class="lesson-btn active" onclick="loadLesson(1)">1. تعريف وفتح SPSS</button>
-        <button class="lesson-btn" onclick="loadLesson(2)">2. نوافذ البرنامج (المتغيرات/البيانات)</button>
-        <button class="lesson-btn" onclick="loadLesson(3)">3. إدخال المتغيرات (Variable View)</button>
-        <button class="lesson-btn" onclick="loadLesson(4)">4. التحليل الوصفي (Descriptives)</button>
-        <button class="lesson-btn" onclick="loadLesson(5)">5. الجداول المزدوجة (Crosstabs)</button>
-        <button class="lesson-btn" onclick="loadLesson(6)">6. اختبار الثبات (Alpha Cronbach)</button>
-        <button class="lesson-btn" onclick="loadLesson(7)">7. اختبار الفرضيات (Correlations)</button>
+    <div class="progress-bar">
+        <div class="step-indicator active" id="ind-1">1. تعريف المتغيرات<br><small>Vue des variables</small></div>
+        <div class="step-indicator" id="ind-2">2. إدخال البيانات<br><small>Vue de données</small></div>
+        <div class="step-indicator" id="ind-3">3. إجراء التحليل<br><small>Analyse</small></div>
+        <div class="step-indicator" id="ind-4">4. النتائج والتقرير<br><small>Sortie & PDF</small></div>
     </div>
 
-    <div class="workspace">
-        <div id="lesson-content" class="info-box">
-            أهلاً بك. هذا التطبيق يحاكي الدروس الموجودة في المحور الثالث. اختر درساً من القائمة أو جرب الأزرار في الأعلى.
-        </div>
-
-        <div class="tabs">
-            <div class="tab" id="tab-data" onclick="switchTab('data')">Vue de données (بيانات)</div>
-            <div class="tab active" id="tab-var" onclick="switchTab('var')">Vue des variables (متغيرات)</div>
-        </div>
-
-        <div class="grid-container" id="grid-view">
-            </div>
+    <div class="content-area">
         
-        <div style="padding:5px; background:#eee; font-size:12px; border-top:1px solid #ccc;">
-            [span_0](start_span)SPSS Processor is ready[span_0](end_span)
+        <div id="step-1" class="step-content active">
+            <h3>الخطوة الأولى: تعريف المتغيرات (Variable View)</h3>
+            [span_0](start_span)<p>يا لمياء، أول شيء في SPSS هو أن نخبر البرنامج ما هي الأسئلة الموجودة في الاستبيان[span_0](end_span).</p>
+            <div class="window-simulation">
+                <table class="spss-table">
+                    <thead>
+                        <tr><th>#</th><th>Nom (الاسم)</th><th>Type (النوع)</th><th>Label (الوصف)</th><th>Values (القيم)</th><th>Mesure (القياس)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td style="color:blue">Sexe</td>
+                            <td>Numeric</td>
+                            <td>جنس المشارك</td>
+                            <td>{1=ذكر, 2=أنثى}</td>
+                            <td>Nominal <span style="font-size:16px">🎈🎈🎈</span></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td style="color:blue">Age</td>
+                            <td>Numeric</td>
+                            <td>كم عمرك؟</td>
+                            <td>None</td>
+                            <td>Scale <span style="font-size:16px">📏</span></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td style="color:blue">Satisf</td>
+                            <td>Numeric</td>
+                            <td>مدى رضاك عن الخدمة</td>
+                            <td>{1=غير راض... 5=راض جدا}</td>
+                            <td>Ordinal <span style="font-size:16px">📊</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                [span_1](start_span)<p><i>💡 ملاحظة: تذكري أن خانة "Nom" لا تقبل المسافات[span_1](end_span).</i></p>
+            </div>
         </div>
-    </div>
-</div>
 
-<div id="output-window">
-    <div class="window-header">
-        [span_1](start_span)<span>Output Viewer - Résultats[span_1](end_span)</span>
-        <span class="close-btn" onclick="closeOutput()">X</span>
-    </div>
-    <div class="window-content" id="output-content">
+        <div id="step-2" class="step-content">
+            <h3>الخطوة الثانية: تفريغ الاستبيان (Data View)</h3>
+            <p>الآن ننتقل لنافذة البيانات. [span_2](start_span)كل سطر هنا يمثل "شخصاً" واحداً ملأ الاستمارة[span_2](end_span).</p>
+            <div class="window-simulation">
+                <table class="spss-table">
+                    <thead>
+                        <tr><th></th><th>Sexe</th><th>Age</th><th>Satisf</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="background:#eee">1</td><td>1</td><td>24</td><td>4</td></tr>
+                        <tr><td style="background:#eee">2</td><td>2</td><td>22</td><td>5</td></tr>
+                        <tr><td style="background:#eee">3</td><td>1</td><td>28</td><td>2</td></tr>
+                        <tr><td style="background:#eee">4</td><td>2</td><td>21</td><td>4</td></tr>
+                        <tr><td style="background:#eee">5</td><td>1</td><td>30</td><td>1</td></tr>
+                        <tr><td style="background:#eee">...</td><td>...</td><td>...</td><td>...</td></tr>
+                    </tbody>
+                </table>
+                <p><i>تم إدخال بيانات 50 شخصاً تلقائياً لهذه التجربة!</i></p>
+            </div>
         </div>
+
+        <div id="step-3" class="step-content">
+            <h3>الخطوة الثالثة: اختاري نوع التحليل</h3>
+            <p>ماذا تريدين أن تفعلي يا لمياء؟ [span_3](start_span)اختاري من القائمة لمحاكاة العملية[span_3](end_span).</p>
+            
+            <div style="display:flex; gap:20px; justify-content:center; margin-top:50px;">
+                <button class="btn" style="border:1px solid #ccc; background:white; padding:20px;" onclick="selectAnalysis('desc')">
+                    <strong style="font-size:1.2rem; display:block; margin-bottom:10px;">📊 إحصاء وصفي</strong>
+                    Descriptives / Fréquences
+                </button>
+                <button class="btn" style="border:1px solid #ccc; background:white; padding:20px;" onclick="selectAnalysis('rel')">
+                    <strong style="font-size:1.2rem; display:block; margin-bottom:10px;">🔗 علاقات وارتباط</strong>
+                    Correlations / Crosstabs
+                </button>
+            </div>
+            <div id="analysis-msg" style="text-align:center; margin-top:20px; color:green; font-weight:bold; display:none;">
+                جاري المعالجة... اضغطي "التالي" لرؤية النتائج!
+            </div>
+        </div>
+
+        <div id="step-4" class="step-content">
+            <h3>النتيجة النهائية (Output Viewer)</h3>
+            [span_4](start_span)<p>هذه هي نافذة المخرجات التي نبحث عنها[span_4](end_span). يمكنك تحميلها الآن.</p>
+            
+            <div id="final-report">
+                <div class="report-header">
+                    <h2>تقرير التحليل الإحصائي - جامعة بومرداس</h2>
+                    <p>تاريخ التحليل: <span id="current-date"></span></p>
+                </div>
+
+                <div class="sp-log">
+                    GET FILE='C:\Users\Lamia\Documents\spss_data.sav'.<br>
+                    DATASET NAME DataSet1 WINDOW=FRONT.<br>
+                    FREQUENCIES VARIABLES=Sexe Satisf /STATISTICS=MEAN MEDIAN.
+                </div>
+
+                <h4>Statistics (الإحصائيات)</h4>
+                <table class="spss-table" style="border:2px solid #000;">
+                    <tr><th>المتغير</th><th>N (العدد)</th><th>Mean (المتوسط)</th><th>Std. Deviation</th></tr>
+                    <tr><td>السن (Age)</td><td>50</td><td>24.42</td><td>5.22</td></tr>
+                    <tr><td>الرضا (Satisf)</td><td>50</td><td>3.50</td><td>1.12</td></tr>
+                </table>
+
+                [span_5](start_span)<h4>Tableau de Fréquence: Sexe (الجنس)[span_5](end_span)</h4>
+                <table class="spss-table" style="border:2px solid #000;">
+                    <tr><th></th><th>Frequency</th><th>Percent</th><th>Valid Percent</th></tr>
+                    <tr><td>ذكر</td><td>21</td><td>42.0%</td><td>42.0%</td></tr>
+                    <tr><td>أنثى</td><td>29</td><td>58.0%</td><td>58.0%</td></tr>
+                    <tr><td><b>Total</b></td><td><b>50</b></td><td><b>100.0%</b></td><td><b>100.0%</b></td></tr>
+                </table>
+
+                [span_6](start_span)<h4>Correlations (الارتباط)[span_6](end_span)</h4>
+                <p>نلاحظ وجود ارتباط قوي ومعنوي (Sig = 0.000) بين الرضا والسن.</p>
+                
+                <div style="margin-top:20px; text-align:center; color:#666;">
+                    -- نهاية التقرير --
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <button class="btn btn-prev" id="prevBtn" onclick="changeStep(-1)" disabled>السابق</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-next" id="nextBtn" onclick="changeStep(1)">التالي</button>
+        <button class="btn btn-pdf" id="pdfBtn" onclick="generatePDF()">📥 تحميل التقرير PDF</button>
+    </footer>
 </div>
 
 <script>
-    // بيانات افتراضية بناءً على الملف صفحة 15 (Q1.1, Q1.2)
-    const variables = [
-        { name: "Q1.1", type: "Numeric", width: 8, decimals: 0, label: "الجنس", values: "{1, ذكر}...", measure: "Nominal" },
-        { name: "Q1.2", type: "Numeric", width: 2, decimals: 0, label: "كم عمرك (السنوات)؟", values: "None", measure: "Scale" },
-        { name: "Q1.3", type: "Numeric", width: 8, decimals: 0, label: "هل تعمل؟", values: "{1, نعم}...", measure: "Nominal" },
-        { name: "Satisfaction", type: "Numeric", width: 8, decimals: 2, label: "رضاك عن ظروف العمل", values: "Scale", measure: "Ordinal" }
-    ];
+    let currentStep = 1;
+    const totalSteps = 4;
 
-    const dataRows = [
-        ["1", "24", "1", "1.50"],
-        ["2", "22", "2", "2.00"],
-        ["1", "25", "1", "1.00"],
-        ["2", "23", "2", "3.00"]
-    ];
+    // وضع التاريخ الحالي
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('ar-DZ');
 
-    [span_2](start_span)// دالة التبديل بين نافذة البيانات ونافذة المتغيرات[span_2](end_span)
-    function switchTab(view) {
-        const grid = document.getElementById('grid-view');
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    function changeStep(n) {
+        // إخفاء الخطوة الحالية
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        document.getElementById(`ind-${currentStep}`).classList.remove('active');
+        if(n === 1) document.getElementById(`ind-${currentStep}`).classList.add('completed');
+
+        // تحديث الرقم
+        currentStep += n;
+
+        // إظهار الخطوة الجديدة
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        document.getElementById(`ind-${currentStep}`).classList.add('active');
+
+        // التحكم في الأزرار
+        document.getElementById('prevBtn').disabled = (currentStep === 1);
         
-        if (view === 'var') {
-            document.getElementById('tab-var').classList.add('active');
-            renderVariableView(grid);
+        if (currentStep === totalSteps) {
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('pdfBtn').style.display = 'block';
         } else {
-            document.getElementById('tab-data').classList.add('active');
-            renderDataView(grid);
+            document.getElementById('nextBtn').style.display = 'block';
+            document.getElementById('nextBtn').innerText = 'التالي';
+            document.getElementById('pdfBtn').style.display = 'none';
         }
     }
 
-    [span_3](start_span)[span_4](start_span)// رسم نافذة المتغيرات (Variable View) كما في الصفحة 8 و 15[span_3](end_span)[span_4](end_span)
-    function renderVariableView(container) {
-        let html = `<table>
-            <thead>
-                <tr>
-                    <th>Nom</th><th>Type</th><th>Largeur</th><th>Décimales</th><th>Libellé</th><th>Valeurs</th><th>Manquant</th><th>Mesure</th>
-                </tr>
-            </thead>
-            <tbody>`;
-        variables.forEach((v, i) => {
-            html += `<tr>
-                <td>${v.name}</td>
-                <td>${v.type}</td>
-                <td>${v.width}</td>
-                <td>${v.decimals}</td>
-                <td>${v.label}</td>
-                <td>${v.values}</td>
-                <td>None</td>
-                <td>${v.measure}</td>
-            </tr>`;
-        });
-        // إضافة صفوف فارغة للمحاكاة
-        for(let j=0; j<10; j++) html += `<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
-        html += `</tbody></table>`;
-        container.innerHTML = html;
+    function selectAnalysis(type) {
+        document.querySelectorAll('#step-3 button').forEach(b => b.style.background = 'white');
+        event.currentTarget.style.background = '#e3f2fd';
+        document.getElementById('analysis-msg').style.display = 'block';
     }
 
-    [span_5](start_span)// رسم نافذة البيانات (Data View) كما في الصفحة 9[span_5](end_span)
-    function renderDataView(container) {
-        let html = `<table><thead><tr><th></th>`;
-        variables.forEach(v => html += `<th>${v.name}</th>`);
-        html += `</tr></thead><tbody>`;
+    function generatePDF() {
+        const element = document.getElementById('final-report');
+        const opt = {
+            margin:       10,
+            filename:     'نتائج_تحليل_SPSS_لمياء.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
         
-        dataRows.forEach((row, i) => {
-            html += `<tr><td style="background:#f0f0f0;">${i+1}</td>`;
-            row.forEach(val => html += `<td>${val}</td>`);
-            html += `</tr>`;
-        });
-        // صفوف فارغة
-        for(let j=dataRows.length; j<15; j++) {
-            html += `<tr><td style="background:#f0f0f0;">${j+1}</td>`;
-            variables.forEach(() => html += `<td></td>`);
-            html += `</tr>`;
-        }
-        html += `</tbody></table>`;
-        container.innerHTML = html;
+        // استخدام المكتبة لإنشاء الملف
+        html2pdf().set(opt).from(element).save();
     }
-
-    // محاكاة زر "تحليل" - يعرض قائمة خيارات بسيطة
-    function analyze(type) {
-        const action = prompt("محاكاة قائمة التحليل (Analyse):\n1. Statistiques descriptives (إحصاء وصفي)\n2. Tableaux Croisés (جداول مزدوجة)\n3. Fiabilité (ثبات)\n4. Corrélation (ارتباط)\n\nأدخل رقم العملية:");
-        
-        const outputWin = document.getElementById('output-window');
-        const content = document.getElementById('output-content');
-        outputWin.style.display = 'flex';
-
-        if (action == '1') {
-            [span_6](start_span)// محاكاة الجدول الموجود في الصفحة 29[span_6](end_span)
-            content.innerHTML = `<h3>Statistiques descriptives</h3>
-            <table border="1" style="border-collapse:collapse; width:100%">
-                <tr style="background:#eee"><td><b>المقياس</b></td><td><b>السن</b></td><td><b>الرضا</b></td></tr>
-                <tr><td>N Valid</td><td>10</td><td>10</td></tr>
-                <tr><td>Moyenne</td><td>1.89</td><td>2.00</td></tr>
-                <tr><td>Médiane</td><td>1.50</td><td>2.00</td></tr>
-                <tr><td>Ecart-type</td><td>1.16</td><td>0.94</td></tr>
-            </table>
-            <p style="color:red">ملاحظة: هذه البيانات مأخوذة من المثال في الصفحة 29.</p>`;
-        } else if (action == '2') {
-            [span_7](start_span)// محاكاة الجدول المزدوج في الصفحة 37[span_7](end_span)
-            content.innerHTML = `<h3>Tableau croisé: الجنس * هل تعمل</h3>
-            <table border="1" style="border-collapse:collapse; width:100%">
-                <tr><td></td><td>لا يعمل</td><td>يعمل</td><td>Total</td></tr>
-                <tr><td>ذكر</td><td>13 (61.9%)</td><td>8 (38.1%)</td><td>21</td></tr>
-                <tr><td>أنثى</td><td>23 (79.3%)</td><td>6 (20.7%)</td><td>29</td></tr>
-                <tr><td><b>Total</b></td><td>36</td><td>14</td><td>50</td></tr>
-            </table>`;
-        } else if (action == '3') {
-            [span_8](start_span)// محاكاة ألفا كرونباخ الصفحة 49[span_8](end_span)
-            content.innerHTML = `<h3>Reliability Statistics</h3>
-            <table border="1" style="border-collapse:collapse; width:50%">
-                <tr><th>Alpha de Cronbach</th><th>N of Items</th></tr>
-                <tr><td>0.823</td><td>5</td></tr>
-            </table>
-            <p>القرار: بما أن القيمة أكبر من 0.7 فالاستبيان ثابت.</p>`;
-        } else if (action == '4') {
-             [span_9](start_span)// محاكاة الارتباط الصفحة 45[span_9](end_span)
-             content.innerHTML = `<h3>Correlations (Pearson)</h3>
-             <p>الارتباط بين العبارات ومتوسط المحور قوي ومعنوي (Sig = 0.000).</p>`;
-        } else {
-            content.innerHTML = "يرجى اختيار رقم صحيح من القائمة.";
-        }
-    }
-
-    function closeOutput() {
-        document.getElementById('output-window').style.display = 'none';
-    }
-
-    // عرض المعلومات من الشريط الجانبي بناءً على الملف
-    function loadLesson(num) {
-        const box = document.getElementById('lesson-content');
-        document.querySelectorAll('.lesson-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-
-        switch(num) {
-            case 1:
-                [span_10](start_span)box.innerHTML = "<b>تعريف SPSS:</b> الحزمة الاحصائية للعلوم الاجتماعية. ظهر سنة 1965[span_10](end_span)[span_11](start_span).<br><b>كيفية الفتح:</b> Démarrer > Programmes > IBM SPSS Statistics[span_11](end_span).";
-                break;
-            case 2:
-                box.innerHTML = "<b>نوافذ SPSS:</b> يحتوي على ثلاث نوافذ رئيسية: <br>1. نافذة المتغيرات (Vue des variables).<br>2. نافذة البيانات (Vue de données).<br>3. [span_12](start_span)[span_13](start_span)نافذة المخرجات (Output Viewer) التي تظهر عند التحليل[span_12](end_span)[span_13](end_span).";
-                break;
-            case 3:
-                [span_14](start_span)box.innerHTML = "<b>خصائص المتغير[span_14](end_span):</b><br>- Nom: اسم المتغير (بدون مسافات).<br>- Type: رقمي أو نصي.<br>- Decimals: الأرقام بعد الفاصلة.<br>- Libellé: الوصف الكامل للسؤال.<br>- Valeurs: ترميز الإجابات (1=ذكر).";
-                switchTab('var');
-                break;
-            case 4:
-                [span_15](start_span)box.innerHTML = "<b>التحليل الوصفي[span_15](end_span):</b><br>القائمة: Analyse > Statistiques descriptives > Fréquences.<br>نستخدمه لحساب المتوسطات، الانحراف المعياري، ورسم المنحنى الطبيعي.";
-                break;
-            case 5:
-                [span_16](start_span)box.innerHTML = "<b>الجداول المزدوجة[span_16](end_span):</b><br>القائمة: Analyse > Stat descriptives > Tableaux Croisés.<br>تستخدم لدراسة العلاقة بين متغيرين اسميين (مثل الجنس والعمل).";
-                break;
-            case 6:
-                [span_17](start_span)box.innerHTML = "<b>اختبار الثبات[span_17](end_span):</b><br>القائمة: Analyse > Echelle > Analyse de la fiabilité.<br>المؤشر: Alpha de Cronbach. إذا كان > 0.7 فالاستبيان ثابت.";
-                break;
-            case 7:
-                box.innerHTML = "<b>الفرضيات:</b><br>1. [span_18](start_span)اعتدالية البيانات: Kolmogorov-Smirnov[span_18](end_span).<br>2. [span_19](start_span)العلاقات: معامل ارتباط Pearson للبيانات الكمية[span_19](end_span) [span_20](start_span)أو Chi-Square للبيانات الاسمية[span_20](end_span).";
-                break;
-        }
-    }
-
-    // معلومات القوائم العلوية
-    function showInfo(menu) {
-        alert("هذه القائمة مشروحة في الصفحة 11 و 12 من الملف.\nمثلاً قائمة " + menu + " تحتوي على أوامر خاصة بـ " + (menu=='Data' ? 'دمج وتقسيم الملفات' : 'تعديل البيانات') + ".");
-    }
-
-    // التشغيل الأولي
-    renderVariableView(document.getElementById('grid-view'));
 </script>
 
 </body>
